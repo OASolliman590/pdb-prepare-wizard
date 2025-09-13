@@ -13,10 +13,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="pdb-prepare-wizard",
-    version="2.0.0",
+    version="2.1.0",
     author="Molecular Docking Pipeline",
     author_email="",
-    description="A comprehensive tool for preparing PDB files for molecular docking studies",
+    description="A comprehensive tool for preparing PDB files for molecular docking studies and analyzing docking results",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
@@ -37,6 +37,7 @@ setup(
     entry_points={
         "console_scripts": [
             "pdb-prepare-wizard=PDP_prep_improved:main",
+            "post-docking-analysis=post_docking_analysis.cli:main",
         ],
     },
     include_package_data=True,

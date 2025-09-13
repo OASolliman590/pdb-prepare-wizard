@@ -26,6 +26,13 @@ A comprehensive tool for preparing PDB files for molecular docking studies. This
 - **Multi-PDB Analysis**: Analyze multiple PDB structures in a single session
 - **Excel Integration**: Generate comprehensive Excel reports with all results
 - **Report Generation**: Generate detailed CSV and Excel reports with all analysis results
+- **🆕 Post-Docking Analysis**: Comprehensive analysis of molecular docking results
+  - **Binding Affinity Analysis**: Parse and analyze Vina/GNINA docking results
+  - **Best Pose Selection**: Automatically identify highest binding affinity poses
+  - **PDB Extraction**: Extract best poses as complete receptor-ligand complex PDB files
+  - **Statistical Analysis**: Generate comprehensive statistics and rankings
+  - **Visualization**: Create binding affinity distributions and top performer plots
+  - **Multi-format Reports**: CSV, Excel, and text summary reports
 
 ## 📋 Requirements
 
@@ -39,6 +46,7 @@ A comprehensive tool for preparing PDB files for molecular docking studies. This
 - **Optional**: plip (for advanced interaction analysis)
 - **Visualization**: matplotlib, seaborn
 - **Excel Support**: openpyxl (for Excel report generation)
+- **Post-Docking Analysis**: openbabel (for ligand processing and PDBQT conversion)
 - **Development**: jupyter
 
 ## 🛠️ Installation
@@ -136,6 +144,82 @@ pocket_results = pipeline.analyze_pocket_properties(cleaned_pdb, coords)
 
 # 7. Generate report
 pipeline.generate_summary_report(pocket_results, "1ABC")
+```
+
+### Post-Docking Analysis Usage
+
+The post-docking analysis module provides comprehensive analysis of molecular docking results from AutoDock Vina or GNINA.
+
+#### Command Line Usage
+
+```bash
+# Basic usage - analyze docking results in a directory
+python -m post_docking_analysis -i /path/to/docking/results -o /path/to/output
+
+# With verbose output
+python -m post_docking_analysis -i /path/to/docking/results -o /path/to/output -v
+
+# Skip visualizations (faster processing)
+python -m post_docking_analysis -i /path/to/docking/results --no-visualizations
+
+# Use configuration file
+python -m post_docking_analysis --config my_config.json
+```
+
+#### Python API Usage
+
+```python
+from post_docking_analysis.pipeline import PostDockingAnalysisPipeline
+
+# Initialize pipeline
+pipeline = PostDockingAnalysisPipeline(
+    input_dir="/path/to/docking/results",
+    output_dir="/path/to/output"
+)
+
+# Run complete analysis
+success = pipeline.run_pipeline()
+
+# Access results
+if success:
+    best_poses = pipeline.results['best_poses']
+    print(f"Best binding affinity: {best_poses['vina_affinity'].min():.2f} kcal/mol")
+```
+
+#### Expected Input Structure
+
+The pipeline automatically detects and processes docking results in the following formats:
+
+```
+docking_results/
+├── complex_1/
+│   ├── ligand_vina_out.pdbqt    # Vina docking results
+│   ├── ligand.sdf               # Ligand structure
+│   └── complex_1.pdb            # Optional: receptor structure
+├── complex_2/
+│   ├── ligand_vina_out.pdbqt
+│   └── ligand.sdf
+└── receptors/                   # Optional: shared receptor files
+    └── receptor.pdbqt
+```
+
+#### Output Structure
+
+```
+output_directory/
+├── reports/                     # Analysis reports
+│   ├── best_poses.csv          # Best pose for each complex
+│   ├── full_data.csv           # All poses with scores
+│   ├── summary_stats.csv       # Statistical summaries
+│   ├── docking_analysis_results.xlsx  # Comprehensive Excel report
+│   └── summary_report.txt      # Human-readable summary
+├── visualizations/              # Generated plots
+│   ├── binding_affinity_distribution.png
+│   └── top_performers.png
+└── best_poses_pdb/             # Best poses as PDB files
+    ├── complex_1_pose1.pdb
+    ├── complex_2_pose1.pdb
+    └── ...
 ```
 
 ## 📊 Output Files

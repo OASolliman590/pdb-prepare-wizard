@@ -5,6 +5,24 @@ All notable changes to PDB Prepare Wizard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2025-01-XX
+
+### Added
+- **🆕 Post-Docking Analysis Module**: Comprehensive analysis of molecular docking results
+  - **Binding Affinity Analysis**: Parse and analyze Vina/GNINA docking results from PDBQT files
+  - **Best Pose Selection**: Automatically identify highest binding affinity poses using `idxmin()`
+  - **PDB Extraction**: Extract best poses as complete receptor-ligand complex PDB files
+  - **Statistical Analysis**: Generate comprehensive statistics and rankings
+  - **Multi-format Visualization**: Binding affinity distributions and top performer plots
+  - **Comprehensive Reporting**: CSV, Excel, and text summary reports
+  - **Open Babel Integration**: For ligand processing and PDBQT to PDB conversion
+  - **Flexible Input Detection**: Auto-detects single-folder or multi-folder directory structures
+  - **Command-line Interface**: Full CLI with configuration file support
+  - **Python API**: Programmatic access to all analysis functions
+
+### Dependencies
+- **Added Open Babel**: Required for post-docking analysis ligand processing
+
 ## [2.0.0] - 2024-12-19
 
 ### Added
