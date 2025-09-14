@@ -13,7 +13,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="pdb-prepare-wizard",
-    version="3.0.0",
+    version="3.0.1",
     author="Molecular Docking Pipeline",
     author_email="",
     description="A comprehensive tool for preparing PDB files for molecular docking studies with advanced PLIP integration and comprehensive interaction analysis",

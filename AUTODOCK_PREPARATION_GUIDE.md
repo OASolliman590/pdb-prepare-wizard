@@ -313,12 +313,19 @@ graph TD
    pip install plip
    ```
 
-3. **File Format Issues**
+3. **Ligand Preparation Issues (FIXED in v3.0.1)**
+   ```bash
+   # Issue: "RDKit molecule has implicit Hs. Need explicit Hs."
+   # Solution: The system now automatically adds explicit hydrogens
+   # The enhanced script uses: obabel input.pdb -O output.sdf -h
+   ```
+
+4. **File Format Issues**
    - Ensure input files are in supported formats
    - Check file permissions and paths
    - Validate file integrity
 
-4. **Memory Issues**
+5. **Memory Issues**
    - Use smaller batch sizes
    - Close other applications
    - Consider using cloud resources
@@ -331,6 +338,8 @@ graph TD
 | `Invalid JSON configuration` | Malformed config file | Check JSON syntax |
 | `File too small` | Output file validation failed | Check input file quality |
 | `PLIP analysis failed` | PLIP not working properly | Reinstall PLIP or disable |
+| `RDKit molecule has implicit Hs` | **FIXED in v3.0.1** | System now adds explicit hydrogens automatically |
+| `Failed to prepare ligand` | PDB→SDF→PDBQT conversion issue | **FIXED in v3.0.1** - Enhanced script handles this |
 
 ## 🔄 Integration with PDB Prepare Wizard
 
