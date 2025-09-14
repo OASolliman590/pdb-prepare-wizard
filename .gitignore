@@ -57,6 +57,10 @@ temp/
 tmp/
 test_output/
 
+# AutoDock preparation logs
+autodock_prep_*.log
+logs/
+
 # Jupyter
 .ipynb_checkpoints
 
