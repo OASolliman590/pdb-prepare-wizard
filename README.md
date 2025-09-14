@@ -55,6 +55,17 @@ A comprehensive tool for preparing PDB files for molecular docking studies with 
   - **Visualization**: Create binding affinity distributions and top performer plots
   - **Multi-format Reports**: CSV, Excel, and text summary reports
 
+### 🆕 AutoDock Preparation (v3.0)
+- **Enhanced AutoDock Preparation**: Comprehensive preparation for AutoDock Vina docking
+  - **Multi-format Support**: Handles PDB, SDF, MOL2 for ligands; PDB for receptors
+  - **PLIP Integration**: Binding site validation and interaction analysis
+  - **Flexible Input/Output**: Same-folder or separate-folder scenarios
+  - **PDB Ligand Extraction**: Extract ligands directly from PDB files
+  - **Quality Control**: Comprehensive validation of prepared files
+  - **Configuration Support**: JSON/YAML configuration files
+  - **Progress Tracking**: Real-time progress indicators and detailed logging
+  - **Error Recovery**: Robust error handling and graceful failure recovery
+
 ## 📋 Requirements
 
 ### System Requirements
@@ -226,6 +237,84 @@ if residue_analysis:
     pocket_results = pipeline.analyze_pocket_properties(
         cleaned_pdb, residue_analysis['overall_center']
     )
+```
+
+### AutoDock Preparation Usage
+
+The enhanced AutoDock preparation system provides comprehensive preparation for AutoDock Vina docking with PLIP integration.
+
+#### Command Line Usage
+
+# Create configuration file
+python autodock_preparation.py --create-config
+
+# Edit configuration file
+nano autodock_config.json
+
+# Run preparation with custom settings
+python autodock_preparation.py \
+    --ligands-input ./ligands_raw \
+    --receptors-input ./receptors_raw \
+    --ligands-output ./ligands_prep \
+    --receptors-output ./receptors_prep \
+    --force-field AMBER \
+    --ph 7.4
+
+# Run with bash script
+./prep_autodock_enhanced.sh autodock_config.json
+
+#### Python API Usage
+
+from autodock_preparation import AutoDockPreparationPipeline, PreparationConfig
+
+# Create configuration
+config = PreparationConfig(
+    ligands_input="./ligands_raw",
+    receptors_input="./receptors_raw",
+    ligands_output="./ligands_prep",
+    receptors_output="./receptors_prep",
+    force_field="AMBER",
+    ph=7.4,
+    plip_enabled=True
+)
+
+# Initialize and run pipeline
+pipeline = AutoDockPreparationPipeline(config)
+success = pipeline.run_enhanced_preparation()
+
+if success:
+    results = pipeline.analyze_preparation_results("./receptors_prep")
+    print(f"Ligands prepared: {results['ligands']['count']}")
+    print(f"Receptors prepared: {results['receptors']['count']}")
+
+#### Expected Input Structure
+
+```
+project_directory/
+├── ligands_raw/                 # Input ligands (SDF, MOL2, PDB)
+│   ├── ligand1.sdf
+│   ├── ligand2.mol2
+│   └── ligand3.pdb
+├── receptors_raw/               # Input receptors (PDB)
+│   ├── receptor1.pdb
+│   └── receptor2.pdb
+└── autodock_config.json         # Configuration file
+```
+
+#### Output Structure
+
+```
+project_directory/
+├── ligands_prep/                # Prepared ligands (PDBQT)
+│   ├── ligand1.pdbqt
+│   ├── ligand2.pdbqt
+│   └── ligand3.pdbqt
+├── receptors_prep/              # Prepared receptors (PDBQT)
+│   ├── receptor1.pdbqt
+│   ├── receptor2.pdbqt
+│   ├── plip_analysis/           # PLIP analysis results
+│   └── preparation_summary.txt  # Summary report
+└── logs/                        # Log files
 ```
 
 ### Post-Docking Analysis Usage
