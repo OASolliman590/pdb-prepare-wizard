@@ -180,20 +180,27 @@ class AutoDockPreparationPipeline:
                 pdbqt_file = Path(output_dir) / f"{base_name}.pdbqt"
                 
                 # Use obabel to convert PDB to SDF first, then to PDBQT
-                sdf_file = Path(output_dir) / f"{base_name}.sdf"
+                sdf_file = Path(output_dir) / f"{base_name}_temp.sdf"
                 
-                # PDB → SDF
-                subprocess.run([
-                    "obabel", ligand_pdb, "-O", str(sdf_file)
-                ], check=True, capture_output=True)
-                
-                # SDF → PDBQT
-                subprocess.run([
-                    "mk_prepare_ligand.py", "-i", str(sdf_file), "-o", str(pdbqt_file)
-                ], check=True, capture_output=True)
-                
-                # Clean up intermediate file
-                sdf_file.unlink()
+                try:
+                    # PDB → SDF (with explicit hydrogens)
+                    subprocess.run([
+                        "obabel", ligand_pdb, "-O", str(sdf_file), "-h"
+                    ], check=True, capture_output=True)
+                    
+                    # SDF → PDBQT
+                    subprocess.run([
+                        "mk_prepare_ligand.py", "-i", str(sdf_file), "-o", str(pdbqt_file)
+                    ], check=True, capture_output=True)
+                    
+                    # Clean up intermediate file
+                    sdf_file.unlink()
+                    
+                except subprocess.CalledProcessError as e:
+                    # Clean up intermediate file if it exists
+                    if sdf_file.exists():
+                        sdf_file.unlink()
+                    raise e
                 
                 self.logger.info(f"Prepared ligand: {pdbqt_file}")
                 return str(pdbqt_file)

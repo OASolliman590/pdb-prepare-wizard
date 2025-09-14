@@ -253,16 +253,33 @@ prepare_ligands() {
                 continue
             fi
             
-            # Convert to PDBQT
-            if mk_prepare_ligand.py -i "$mol_file" -o "$output_file" 2>/dev/null; then
-                if validate_file "$output_file"; then
-                    log_success "Prepared ligand: $base_name"
+            # Convert to PDBQT (handle PDB format by converting to SDF first)
+            local temp_sdf=""
+            if [[ "$format" == "pdb" ]]; then
+                temp_sdf="$output_dir/${base_name}_temp.sdf"
+                if obabel "$mol_file" -O "$temp_sdf" -h 2>/dev/null; then
+                    if mk_prepare_ligand.py -i "$temp_sdf" -o "$output_file" 2>/dev/null; then
+                        rm -f "$temp_sdf"
+                    else
+                        rm -f "$temp_sdf"
+                        log_error "Failed to prepare ligand: $mol_file (Meeko step)"
+                        continue
+                    fi
                 else
-                    log_error "Invalid output file: $output_file"
-                    rm -f "$output_file"
+                    log_error "Failed to convert PDB to SDF: $mol_file"
+                    continue
                 fi
             else
-                log_error "Failed to prepare ligand: $mol_file"
+                if mk_prepare_ligand.py -i "$mol_file" -o "$output_file" 2>/dev/null; then
+                    if validate_file "$output_file"; then
+                        log_success "Prepared ligand: $base_name"
+                    else
+                        log_error "Invalid output file: $output_file"
+                        rm -f "$output_file"
+                    fi
+                else
+                    log_error "Failed to prepare ligand: $mol_file"
+                fi
             fi
             
         done < <(find "$input_dir" -name "*.${format}" -type f -print0 2>/dev/null)

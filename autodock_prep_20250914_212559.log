@@ -1,0 +1,17 @@
+[2025-09-14 21:25:59] INFO: Starting Enhanced AutoDock Preparation Script
+[2025-09-14 21:25:59] INFO: Configuration file: ./autodock_config.json
+[2025-09-14 21:25:59] INFO: Log file: /Users/omara.soliman/Desktop/Projects /My Projects/8-PDB-Prepare-Wizard/pdb-prepare-wizard/autodock_prep_20250914_212559.log
+[2025-09-14 21:25:59] INFO: Loaded configuration from: ./autodock_config.json
+[2025-09-14 21:25:59] SUCCESS: All required dependencies found
+[2025-09-14 21:25:59] INFO: Starting ligand preparation...
+[2025-09-14 21:25:59] INFO: Found 6 ligand files to process
+[2025-09-14 21:27:06] SUCCESS: Ligand preparation completed:        6/6 files
+[2025-09-14 21:27:06] INFO: Starting receptor preparation...
+[2025-09-14 21:27:06] INFO: Found 5 receptor files to process
+[2025-09-14 21:27:28] ERROR: Failed to prepare receptor: ./receptors_raw/3IAI_CA9_prep.pdb (Meeko step)
+[2025-09-14 21:27:28] SUCCESS: Receptor preparation completed:        4/5 files
+[2025-09-14 21:27:28] SUCCESS: Preparation completed successfully!
+[2025-09-14 21:27:28] INFO: Ligands prepared:        6
+[2025-09-14 21:27:28] INFO: Receptors prepared:        4
+[2025-09-14 21:27:28] INFO: Log file saved: /Users/omara.soliman/Desktop/Projects /My Projects/8-PDB-Prepare-Wizard/pdb-prepare-wizard/autodock_prep_20250914_212559.log
+[2025-09-14 21:27:28] INFO: Summary report saved: ./receptors_prep/preparation_summary.txt
