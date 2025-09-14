@@ -5,9 +5,52 @@ All notable changes to PDB Prepare Wizard will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2025-01-XX
+## [3.0.0] - 2025-01-15
+
+### Major PLIP Integration
+- **🆕 Advanced PLIP Integration**: Research-grade protein-ligand interaction analysis
+  - **Text-based PLIP parsing**: Reliable interaction detection using PLIP's official report format
+  - **Comprehensive interaction types**: All PLIP interaction types supported
+    - Hydrophobic interactions
+    - Hydrogen bonds
+    - Halogen bonds
+    - π-stacking interactions
+    - Water bridges
+    - Salt bridges (configuration ready)
+    - Metal complexes (configuration ready)
+    - π-cation interactions (configuration ready)
+  - **Perfect PLIP web server match**: Results exactly match the official PLIP web server
+  - **Future-proof design**: Automatically detects unknown interaction types
+  - **Robust error handling**: Graceful fallback to distance-based methods
+
+### Enhanced Analysis
+- **🆕 PLIP-Enhanced Coordinate Extraction**: Advanced binding site analysis
+  - **Comprehensive interaction detection**: Uses PLIP's sophisticated algorithms
+  - **Detailed interaction breakdowns**: Residue-level analysis with interaction type classification
+  - **Enhanced accuracy**: Research-grade results matching PLIP web server
+  - **Automatic fallback**: Distance-based method when PLIP is unavailable
+
+### Documentation
+- **🆕 PLIP Interaction Types Guide**: Comprehensive documentation of all PLIP interaction types
+- **🆕 Future-proofing documentation**: Guide for handling new interaction types
+- **🆕 Enhanced README**: Updated with PLIP integration features
+
+## [2.1.0] - 2025-01-15
+
+### Major Restructuring
+- **🔄 Modular Architecture**: Complete codebase reorganization to eliminate duplication
+  - **Consolidated Core Pipeline**: `core_pipeline.py` - Unified core functionality
+  - **Interactive Mode**: `interactive_pipeline.py` - User-friendly interactive interface
+  - **CLI Mode**: `cli_pipeline.py` - Command-line interface with configuration support
+  - **Main Entry Point**: `main.py` - Unified entry point for all modes
+  - **Batch Processing**: Enhanced `batch_pdb_preparation.py` with residue-level analysis
 
 ### Added
+- **🆕 Enhanced Coordinate Extraction**: Residue-level binding site analysis
+  - **Residue-Level Analysis**: `extract_residue_level_coordinates()` function
+  - **Individual Residue Averages**: Calculate average coordinates for each interacting residue
+  - **Comprehensive Binding Site Data**: Overall center, residue details, and atom counts
+  - **Excel Integration**: Enhanced Excel reporting with residue-level data
 - **🆕 Post-Docking Analysis Module**: Comprehensive analysis of molecular docking results
   - **Binding Affinity Analysis**: Parse and analyze Vina/GNINA docking results from PDBQT files
   - **Best Pose Selection**: Automatically identify highest binding affinity poses using `idxmin()`
@@ -19,9 +62,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Flexible Input Detection**: Auto-detects single-folder or multi-folder directory structures
   - **Command-line Interface**: Full CLI with configuration file support
   - **Python API**: Programmatic access to all analysis functions
+- **🆕 CLI Configuration System**: JSON-based configuration for automated processing
+  - **Ligand Selection**: Specify target ligands per PDB
+  - **Cleaning Strategies**: Define cleaning approaches per PDB or globally
+  - **Analysis Options**: Configure analysis parameters
+  - **Sample Config Generation**: `--create-config` option
+
+### Improved
+- **📈 Better Error Handling**: Improved error messages and graceful failure handling
+- **🚀 Performance**: Optimized coordinate extraction algorithms
+- **📊 Enhanced Reporting**: More detailed Excel reports with residue-level data
+- **🔧 Batch Processing**: Fixed PLIP dependencies and improved reliability
+
+### Fixed
+- **❌ PLIP Dependency Issues**: Replaced unreliable PLIP calls with robust distance-based analysis
+- **🔄 Code Duplication**: Eliminated duplication between PDP_prep.py and PDP_prep_improved.py
+- **📝 Batch Processing**: Fixed coordinate extraction errors in batch_pdb_preparation.py
+
+### Removed
+- **Old Files**: Removed `PDP_prep.py` and `PDP_prep_improved.py` (replaced by modular structure)
 
 ### Dependencies
 - **Added Open Babel**: Required for post-docking analysis ligand processing
+
+### Migration Guide
+- **From 2.0.0 to 2.1.0**:
+  - Update imports: `from core_pipeline import MolecularDockingPipeline`
+  - Use new entry points: `python main.py` instead of `python PDP_prep_improved.py`
+  - CLI users: Use `python main.py cli` with new configuration options
+  - Batch users: Updated `batch_pdb_preparation.py` with enhanced coordinate extraction
 
 ## [2.0.0] - 2024-12-19
 

@@ -129,3 +129,100 @@ def identify_top_performers(analysis_results: Dict[str, pd.DataFrame]) -> Dict[s
     print(f"   Best ligand: {best_per_ligand.iloc[0]['ligand']} ({best_per_ligand.iloc[0]['vina_affinity']:.2f} kcal/mol)")
     
     return top_performers
+
+def analyze_protein_ligand_breakdown(scores_df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+    """
+    Analyze best performance by protein and by ligand with detailed breakdown.
+    
+    Parameters
+    ----------
+    scores_df : pd.DataFrame
+        DataFrame containing docking scores with complex information
+        
+    Returns
+    -------
+    Dict[str, pd.DataFrame]
+        Dictionary containing protein and ligand breakdown results
+    """
+    print("🧬 Analyzing protein vs ligand breakdown...")
+    
+    # Parse complex names to extract protein and ligand information
+    def parse_complex_name(complex_name):
+        """Parse complex name to extract protein and ligand."""
+        # Handle different naming conventions
+        if 'x' in complex_name:
+            parts = complex_name.split('x')
+            protein = parts[0].strip()
+            ligand = parts[1].strip()
+        elif '_' in complex_name:
+            parts = complex_name.split('_')
+            if len(parts) >= 2:
+                protein = parts[0]
+                ligand = '_'.join(parts[1:])
+            else:
+                protein = complex_name
+                ligand = "Unknown"
+        else:
+            protein = complex_name
+            ligand = "Unknown"
+        
+        return protein, ligand
+    
+    # Add protein and ligand columns
+    parsed_info = scores_df['complex_name'].apply(parse_complex_name)
+    scores_df = scores_df.copy()
+    scores_df['protein'] = [info[0] for info in parsed_info]
+    scores_df['ligand'] = [info[1] for info in parsed_info]
+    
+    # Find best pose for each complex
+    best_poses = scores_df.loc[scores_df.groupby('complex_name')['vina_affinity'].idxmin()].copy()
+    
+    # Best performance by protein
+    best_per_protein = best_poses.groupby('protein').agg({
+        'vina_affinity': 'min',
+        'complex_name': 'first',
+        'ligand': 'first',
+        'cnn_affinity': 'first',
+        'cnn_score': 'first'
+    }).reset_index()
+    best_per_protein = best_per_protein.sort_values('vina_affinity')
+    best_per_protein.columns = ['protein', 'best_affinity', 'best_complex', 'best_ligand', 'cnn_affinity', 'cnn_score']
+    
+    # Best performance by ligand
+    best_per_ligand = best_poses.groupby('ligand').agg({
+        'vina_affinity': 'min',
+        'complex_name': 'first',
+        'protein': 'first',
+        'cnn_affinity': 'first',
+        'cnn_score': 'first'
+    }).reset_index()
+    best_per_ligand = best_per_ligand.sort_values('vina_affinity')
+    best_per_ligand.columns = ['ligand', 'best_affinity', 'best_complex', 'best_protein', 'cnn_affinity', 'cnn_score']
+    
+    # Protein performance summary
+    protein_summary = best_poses.groupby('protein').agg({
+        'vina_affinity': ['min', 'max', 'mean', 'std', 'count'],
+        'complex_name': 'count'
+    }).round(3)
+    protein_summary.columns = ['min_affinity', 'max_affinity', 'mean_affinity', 'std_affinity', 'pose_count', 'complex_count']
+    protein_summary = protein_summary.reset_index()
+    
+    # Ligand performance summary
+    ligand_summary = best_poses.groupby('ligand').agg({
+        'vina_affinity': ['min', 'max', 'mean', 'std', 'count'],
+        'complex_name': 'count'
+    }).round(3)
+    ligand_summary.columns = ['min_affinity', 'max_affinity', 'mean_affinity', 'std_affinity', 'pose_count', 'complex_count']
+    ligand_summary = ligand_summary.reset_index()
+    
+    print(f"✅ Protein vs ligand breakdown completed")
+    print(f"   Best protein: {best_per_protein.iloc[0]['protein']} ({best_per_protein.iloc[0]['best_affinity']:.2f} kcal/mol)")
+    print(f"   Best ligand: {best_per_ligand.iloc[0]['ligand']} ({best_per_ligand.iloc[0]['best_affinity']:.2f} kcal/mol)")
+    
+    return {
+        'best_per_protein': best_per_protein,
+        'best_per_ligand': best_per_ligand,
+        'protein_summary': protein_summary,
+        'ligand_summary': ligand_summary,
+        'scores_with_breakdown': scores_df
+    }

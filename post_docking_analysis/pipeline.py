@@ -14,6 +14,13 @@ sys.path.insert(0, str(docking_analysis_path))
 from .config import *
 from .input_handler import find_docking_files, validate_complex_files
 from .docking_parser import parse_all_docking_results
+from .affinity_analyzer import analyze_binding_affinities, identify_top_performers, analyze_protein_ligand_breakdown
+from .report_generator import generate_all_reports
+from .visualizer import generate_all_visualizations
+from .rmsd_analyzer import calculate_rmsd_matrix, analyze_pose_clustering, analyze_conformational_diversity, create_rmsd_visualizations
+from .structure_quality import assess_structure_quality, create_quality_visualizations
+from .correlation_analyzer import analyze_vina_cnn_correlation, analyze_score_distributions, analyze_score_agreement, create_correlation_visualizations
+from .pymol_visualizer import PyMOLVisualizer, create_comparative_analysis
 
 class PostDockingAnalysisPipeline:
     """
@@ -119,6 +126,26 @@ class PostDockingAnalysisPipeline:
         if OUTPUT_PDB:
             if not self.extract_best_poses_pdb():
                 return False
+        
+        # Step 7: Analyze protein vs ligand breakdown
+        if not self.analyze_protein_ligand_breakdown():
+            return False
+            
+        # Step 8: Perform RMSD analysis and clustering
+        if not self.analyze_rmsd_and_clustering():
+            return False
+            
+        # Step 9: Assess structure quality
+        if not self.assess_structure_quality():
+            return False
+            
+        # Step 10: Analyze score correlations
+        if not self.analyze_correlations():
+            return False
+            
+        # Step 11: Create PyMOL visualizations
+        if not self.create_pymol_visualizations():
+            return False
                 
         print("✅ Post-Docking Analysis Pipeline completed successfully!")
         return True
@@ -450,7 +477,308 @@ class PostDockingAnalysisPipeline:
         except Exception as e:
             print(f"❌ Error extracting pose from PDBQT: {e}")
             return None
+    
+    def analyze_protein_ligand_breakdown(self):
+        """
+        Analyze best performance by protein and by ligand.
         
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("🧬 Analyzing protein vs ligand breakdown...")
+        
+        if not hasattr(self, 'results') or 'best_poses' not in self.results:
+            print("❌ No results available for protein-ligand breakdown")
+            return False
+        
+        try:
+            # Perform protein-ligand breakdown analysis
+            breakdown_results = analyze_protein_ligand_breakdown(self.results['best_poses'])
+            
+            # Store results
+            if not hasattr(self, 'results'):
+                self.results = {}
+            self.results['protein_ligand_breakdown'] = breakdown_results
+            
+            # Save breakdown reports
+            breakdown_dir = self.output_dir / "reports"
+            breakdown_dir.mkdir(exist_ok=True)
+            
+            breakdown_results['best_per_protein'].to_csv(
+                breakdown_dir / "best_per_protein.csv", index=False
+            )
+            breakdown_results['best_per_ligand'].to_csv(
+                breakdown_dir / "best_per_ligand.csv", index=False
+            )
+            breakdown_results['protein_summary'].to_csv(
+                breakdown_dir / "protein_summary.csv", index=False
+            )
+            breakdown_results['ligand_summary'].to_csv(
+                breakdown_dir / "ligand_summary.csv", index=False
+            )
+            
+            print("✅ Protein vs ligand breakdown completed")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error in protein-ligand breakdown: {e}")
+            return False
+    
+    def analyze_rmsd_and_clustering(self):
+        """
+        Perform RMSD analysis and pose clustering.
+        
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("📏 Analyzing RMSD and pose clustering...")
+        
+        if not hasattr(self, 'results') or 'full_data' not in self.results:
+            print("❌ No results available for RMSD analysis")
+            return False
+        
+        try:
+            # Calculate RMSD matrix (placeholder implementation)
+            rmsd_matrix = calculate_rmsd_matrix(self.results['full_data'])
+            
+            # Perform pose clustering
+            clustering_results = analyze_pose_clustering(
+                self.results['full_data'], rmsd_matrix, method='kmeans', n_clusters=3
+            )
+            
+            # Analyze conformational diversity
+            diversity_results = analyze_conformational_diversity(
+                self.results['full_data'], rmsd_matrix
+            )
+            
+            # Store results
+            if not hasattr(self, 'results'):
+                self.results = {}
+            self.results['rmsd_analysis'] = {
+                'clustering': clustering_results,
+                'diversity': diversity_results,
+                'rmsd_matrix': rmsd_matrix
+            }
+            
+            # Create RMSD visualizations
+            viz_dir = self.output_dir / "visualizations"
+            viz_dir.mkdir(exist_ok=True)
+            rmsd_viz_files = create_rmsd_visualizations(
+                clustering_results, diversity_results, viz_dir
+            )
+            
+            # Save RMSD reports
+            reports_dir = self.output_dir / "reports"
+            reports_dir.mkdir(exist_ok=True)
+            
+            clustering_results['poses_with_clusters'].to_csv(
+                reports_dir / "poses_with_clusters.csv", index=False
+            )
+            clustering_results['cluster_summary'].to_csv(
+                reports_dir / "cluster_summary.csv", index=False
+            )
+            clustering_results['cluster_centroids'].to_csv(
+                reports_dir / "cluster_centroids.csv", index=False
+            )
+            diversity_results['diversity_metrics'].to_csv(
+                reports_dir / "diversity_metrics.csv", index=False
+            )
+            
+            print("✅ RMSD analysis and clustering completed")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error in RMSD analysis: {e}")
+            return False
+    
+    def assess_structure_quality(self):
+        """
+        Assess structure quality of best poses.
+        
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("🔍 Assessing structure quality...")
+        
+        if not hasattr(self, 'results') or 'best_poses' not in self.results:
+            print("❌ No results available for structure quality assessment")
+            return False
+        
+        try:
+            # Get best poses PDB files
+            poses_dir = self.output_dir / "best_poses_pdb"
+            if not poses_dir.exists():
+                print("⚠️ Best poses PDB files not found - skipping quality assessment")
+                return True
+            
+            quality_results = []
+            pdb_files = list(poses_dir.glob("*.pdb"))
+            
+            for pdb_file in pdb_files:
+                quality_assessment = assess_structure_quality(pdb_file)
+                quality_results.append(quality_assessment)
+            
+            # Store results
+            if not hasattr(self, 'results'):
+                self.results = {}
+            self.results['structure_quality'] = quality_results
+            
+            # Create quality visualizations
+            viz_dir = self.output_dir / "visualizations"
+            viz_dir.mkdir(exist_ok=True)
+            quality_viz_files = create_quality_visualizations(quality_results, viz_dir)
+            
+            # Save quality reports
+            reports_dir = self.output_dir / "reports"
+            reports_dir.mkdir(exist_ok=True)
+            
+            quality_summary = []
+            for result in quality_results:
+                quality_summary.append({
+                    'pdb_file': Path(result['pdb_file']).name,
+                    'quality_score': result['quality_score'],
+                    'overall_quality': result['overall_quality'],
+                    'total_clashes': result['clash_data']['total_clashes'],
+                    'allowed_residues_pct': result['ramachandran_quality']['allowed_percentage']
+                })
+            
+            quality_df = pd.DataFrame(quality_summary)
+            quality_df.to_csv(reports_dir / "structure_quality_summary.csv", index=False)
+            
+            print("✅ Structure quality assessment completed")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error in structure quality assessment: {e}")
+            return False
+    
+    def analyze_correlations(self):
+        """
+        Analyze correlations between different scoring functions.
+        
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("📊 Analyzing score correlations...")
+        
+        if not hasattr(self, 'results') or 'full_data' not in self.results:
+            print("❌ No results available for correlation analysis")
+            return False
+        
+        try:
+            # Analyze Vina-CNN correlations
+            correlation_results = analyze_vina_cnn_correlation(self.results['full_data'])
+            
+            # Analyze score distributions
+            distribution_results = analyze_score_distributions(self.results['full_data'])
+            
+            # Analyze score agreement
+            agreement_results = analyze_score_agreement(self.results['full_data'])
+            
+            # Store results
+            if not hasattr(self, 'results'):
+                self.results = {}
+            self.results['correlation_analysis'] = {
+                'correlations': correlation_results,
+                'distributions': distribution_results,
+                'agreement': agreement_results
+            }
+            
+            # Create correlation visualizations
+            viz_dir = self.output_dir / "visualizations"
+            viz_dir.mkdir(exist_ok=True)
+            correlation_viz_files = create_correlation_visualizations(
+                correlation_results, distribution_results, agreement_results, viz_dir
+            )
+            
+            # Save correlation reports
+            reports_dir = self.output_dir / "reports"
+            reports_dir.mkdir(exist_ok=True)
+            
+            if 'error' not in correlation_results:
+                correlation_summary = {
+                    'n_samples': correlation_results['n_samples'],
+                    'vina_cnn_affinity_pearson': correlation_results['pearson_correlations']['vina_cnn_affinity']['correlation'],
+                    'vina_cnn_affinity_p_value': correlation_results['pearson_correlations']['vina_cnn_affinity']['p_value'],
+                    'vina_cnn_score_pearson': correlation_results['pearson_correlations']['vina_cnn_score']['correlation'],
+                    'vina_cnn_score_p_value': correlation_results['pearson_correlations']['vina_cnn_score']['p_value']
+                }
+                
+                correlation_df = pd.DataFrame([correlation_summary])
+                correlation_df.to_csv(reports_dir / "correlation_summary.csv", index=False)
+            
+            print("✅ Correlation analysis completed")
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error in correlation analysis: {e}")
+            return False
+    
+    def create_pymol_visualizations(self):
+        """
+        Create 3D visualizations using PyMOL.
+        
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("🎬 Creating PyMOL visualizations...")
+        
+        try:
+            # Create PyMOL visualizer
+            pymol_dir = self.output_dir / "pymol_visualizations"
+            visualizer = PyMOLVisualizer(pymol_dir)
+            
+            # Get best poses PDB files
+            poses_dir = self.output_dir / "best_poses_pdb"
+            if poses_dir.exists():
+                pdb_files = list(poses_dir.glob("*.pdb"))
+                
+                if len(pdb_files) >= 2:
+                    # Create comparative analysis between first two poses
+                    reference_pdb = pdb_files[0]
+                    novel_pdb = pdb_files[1]
+                    
+                    comparative_results = create_comparative_analysis(
+                        reference_pdb, novel_pdb, pymol_dir, highlight_residues=[212, 213, 214]
+                    )
+                    
+                    # Create best poses gallery
+                    gallery_session = visualizer.create_best_poses_gallery(
+                        pdb_files[:5], "best_poses_gallery"  # Limit to first 5 poses
+                    )
+                    
+                    # Store results
+                    if not hasattr(self, 'results'):
+                        self.results = {}
+                    self.results['pymol_visualizations'] = {
+                        'comparative_analysis': comparative_results,
+                        'gallery_session': gallery_session,
+                        'output_directory': pymol_dir
+                    }
+                    
+                    print("✅ PyMOL visualizations created")
+                    return True
+                else:
+                    print("⚠️ Need at least 2 PDB files for comparative analysis")
+                    return True
+            else:
+                print("⚠️ Best poses PDB files not found - skipping PyMOL visualizations")
+                return True
+                
+        except Exception as e:
+            print(f"❌ Error creating PyMOL visualizations: {e}")
+            return False
+
 
 def main():
     """

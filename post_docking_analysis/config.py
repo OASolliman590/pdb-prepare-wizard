@@ -25,6 +25,27 @@ OUTPUT_MOL2 = True
 FIX_CHAINS = False
 RUN_ADDITIONAL_DOCKING = False
 
+# Advanced Analysis Features
+ENABLE_PROTEIN_LIGAND_BREAKDOWN = True
+ENABLE_RMSD_ANALYSIS = True
+ENABLE_STRUCTURE_QUALITY = True
+ENABLE_CORRELATION_ANALYSIS = True
+ENABLE_PYMOL_VISUALIZATIONS = True
+
+# RMSD Analysis Settings
+RMSD_CLUSTERING_METHOD = "kmeans"  # "kmeans" or "dbscan"
+RMSD_N_CLUSTERS = 3
+RMSD_CUTOFF = 2.0  # Å
+
+# Structure Quality Settings
+QUALITY_CLASH_CUTOFF = 2.0  # Å
+QUALITY_RAMACHANDRAN_THRESHOLD = 0.8
+
+# PyMOL Visualization Settings
+PYMOL_HIGHLIGHT_RESIDUES = [212, 213, 214]  # Residues to highlight
+PYMOL_INTERACTION_CUTOFF = 4.0  # Å
+PYMOL_DPI = 600
+
 # Scoring Function Options
 USE_VINA_SCORE = True
 USE_CNN_SCORE = True  # Requires GNINA

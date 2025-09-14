@@ -1,14 +1,15 @@
-# PDB Prepare Wizard - Molecular Docking Pipeline
+# PDB Prepare Wizard - Molecular Docking Pipeline v3.0
 
 [![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Conda](https://img.shields.io/badge/conda-forge-blue.svg)](https://conda-forge.org/)
 [![Biopython](https://img.shields.io/badge/Biopython-1.79+-green.svg)](https://biopython.org/)
 
-A comprehensive tool for preparing PDB files for molecular docking studies. This pipeline provides automated analysis of protein-ligand complexes, pocket properties, and druggability predictions.
+A comprehensive tool for preparing PDB files for molecular docking studies with advanced PLIP integration. This pipeline provides automated analysis of protein-ligand complexes, comprehensive interaction analysis, and druggability predictions with research-grade accuracy matching the official PLIP web server.
 
 ## 🚀 Features
 
+### Core Functionality
 - **PDB Download**: Automatically fetch PDB files from RCSB PDB database
 - **Ligand Extraction**: Identify and extract HETATM residues (ligands) from structures
   - **Grouped Display**: HETATMs grouped by type with counts
@@ -17,12 +18,32 @@ A comprehensive tool for preparing PDB files for molecular docking studies. This
 - **Structure Cleaning**: Remove water molecules, ions, and other unwanted residues
   - **Smart Cleaning Options**: Remove specific residues, ALL HETATMs, or common residues only
   - **Removal Summary**: Shows exactly what will be removed before confirmation
-- **Active Site Analysis**: Extract binding site coordinates using distance-based or PLIP methods
+
+### Enhanced Analysis (v3.0)
+- **🆕 Advanced PLIP Integration**: Research-grade protein-ligand interaction analysis
+  - **Text-based PLIP parsing**: Reliable interaction detection using PLIP's official report format
+  - **Comprehensive interaction types**: Hydrophobic, hydrogen bonds, halogen bonds, π-stacking, water bridges, salt bridges, metal complexes, π-cation interactions
+  - **Perfect PLIP web server match**: Results exactly match the official PLIP web server
+  - **Future-proof design**: Automatically detects unknown interaction types
+- **🆕 Residue-Level Coordinate Extraction**: Enhanced `extract_residue_level_coordinates()` function
+  - Individual residue averages for detailed binding site analysis
+  - Overall binding site center calculation
+  - Comprehensive statistics (residue count, atom count)
+  - PLIP-enhanced interaction detection with detailed breakdowns
+- **Active Site Analysis**: Extract binding site coordinates using PLIP-enhanced or distance-based methods
 - **Pocket Analysis**: Comprehensive analysis of pocket properties including:
   - Electrostatic potential
   - Hydrophobic character
   - Pocket volume estimation
   - Druggability scoring
+
+### Multiple Interface Options (v2.1.0)
+- **🆕 Interactive Mode**: User-friendly interactive pipeline with guided prompts
+- **🆕 CLI Mode**: Command-line interface with configuration file support
+- **🆕 Batch Processing**: Enhanced batch processing with configuration-driven automation
+- **🆕 Unified Entry Point**: Single `main.py` entry point for all modes
+
+### Reporting & Analysis
 - **Multi-PDB Analysis**: Analyze multiple PDB structures in a single session
 - **Excel Integration**: Generate comprehensive Excel reports with all results
 - **Report Generation**: Generate detailed CSV and Excel reports with all analysis results
@@ -58,8 +79,11 @@ A comprehensive tool for preparing PDB files for molecular docking studies. This
 conda env create -f environment.yml
 conda activate pdb-prepare-wizard
 
+# Install the package
+pip install -e .
+
 # Verify installation
-python PDP_prep_improved.py
+python main.py --help
 ```
 
 ### Option 2: Using pip
@@ -94,56 +118,114 @@ pip install openpyxl
 
 ## 🎯 Usage
 
-### Basic Usage
+### Main Entry Point (v2.1.0)
+
+```bash
+# Interactive mode (default) - User-friendly guided interface
+python main.py
+python main.py interactive
+
+# CLI mode for batch processing with configuration support
+python main.py cli -p 7CMD
+python main.py cli -p "7CMD,6WX4,1ABC" -o results/
+python main.py cli -p 7CMD -c config.json
+
+# Or use the installed commands (after pip install -e .)
+pdb-prepare-wizard                    # Main entry point
+pdb-wizard-interactive               # Interactive mode only
+pdb-wizard-cli -p 7CMD               # CLI mode only
+pdb-wizard-batch                     # Batch processing only
+```
+
+### Python API Usage
 
 ```python
-from PDP_prep_improved import MolecularDockingPipeline
+from core_pipeline import MolecularDockingPipeline, extract_residue_level_coordinates
 
 # Initialize pipeline
 pipeline = MolecularDockingPipeline(output_dir="my_analysis")
 
-# Run complete pipeline
-results = pipeline.run_complete_pipeline("1ABC", interactive=True)
-```
-
-### Command Line Usage
-
-```bash
-# Run interactively (single PDB)
-python PDP_prep_improved.py
-
-# Multi-PDB analysis with Excel output
-python PDP_prep_improved.py
-# Then choose 'y' for multiple PDBs
-
-# Or use the installed command
-pdb-prepare-wizard
-```
-
-### Step-by-Step Usage
-
-```python
-# 1. Initialize pipeline
-pipeline = MolecularDockingPipeline()
-
-# 2. Download PDB file
+# Download and process PDB
 pdb_file = pipeline.fetch_pdb("1ABC")
-
-# 3. Enumerate available ligands
 hetatm_details, unique_hetatms = pipeline.enumerate_hetatms(pdb_file)
 
-# 4. Extract specific ligand
+# Extract specific ligand
 ligand_pdb = pipeline.save_hetatm_as_pdb(pdb_file, "LIG", "A", 1)
 
-# 5. Clean structure
+# Clean structure
 cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list=['HOH', 'NA', 'CL'])
 
-# 6. Analyze pocket
-coords, num_atoms = pipeline.extract_active_site_coords(cleaned_pdb, "LIG", "A", 1)
-pocket_results = pipeline.analyze_pocket_properties(cleaned_pdb, coords)
+# Analyze binding site with enhanced coordinates
+residue_analysis = extract_residue_level_coordinates(cleaned_pdb, "LIG", "A", 1)
+if residue_analysis:
+    coords = residue_analysis['overall_center']
+    pocket_results = pipeline.analyze_pocket_properties(cleaned_pdb, coords)
+```
 
-# 7. Generate report
-pipeline.generate_summary_report(pocket_results, "1ABC")
+### CLI Configuration (v2.1.0)
+
+Create a configuration file for automated processing:
+
+```bash
+# Generate sample config
+python cli_pipeline.py --create-config
+
+# Use configuration file
+python main.py cli -p "7CMD,6WX4" -c config.json
+```
+
+Example configuration:
+```json
+{
+  "description": "Sample configuration for PDB Prepare Wizard CLI",
+  "ligand_selection": {
+    "7cmd": "TTT",
+    "6wx4": "LIG",
+    "1abc": "GDP"
+  },
+  "cleaning": {
+    "default": "common",
+    "7cmd": ["HOH", "NA", "CL"],
+    "custom_pdb": "all"
+  },
+  "analysis": {
+    "use_enhanced_coordinates": true,
+    "distance_cutoff": 5.0
+  }
+}
+```
+
+### Advanced Usage - Residue-Level Analysis (v2.1.0)
+
+The new version includes enhanced coordinate extraction at the residue level:
+
+```python
+from core_pipeline import MolecularDockingPipeline, extract_residue_level_coordinates
+
+# Initialize pipeline
+pipeline = MolecularDockingPipeline()
+
+# Process PDB
+pdb_file = pipeline.fetch_pdb("1ABC")
+hetatm_details, unique_hetatms = pipeline.enumerate_hetatms(pdb_file)
+cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list=['HOH', 'NA', 'CL'])
+
+# Enhanced residue-level coordinate extraction
+residue_analysis = extract_residue_level_coordinates(cleaned_pdb, "LIG", "A", 1)
+
+if residue_analysis:
+    print(f"Binding site center: {residue_analysis['overall_center']}")
+    print(f"Interacting residues: {residue_analysis['num_interacting_residues']}")
+    print(f"Total atoms: {residue_analysis['num_interacting_atoms']}")
+    
+    # Individual residue averages
+    for residue, coord in residue_analysis['residue_averages'].items():
+        print(f"  {residue}: {coord}")
+    
+    # Analyze pocket properties
+    pocket_results = pipeline.analyze_pocket_properties(
+        cleaned_pdb, residue_analysis['overall_center']
+    )
 ```
 
 ### Post-Docking Analysis Usage
@@ -355,6 +437,10 @@ For issues and questions:
 
 ---
 
-**Version**: 2.0.0  
+**Version**: 2.1.0  
 **Last Updated**: 2024  
-**Python Compatibility**: 3.8+ 
+**Python Compatibility**: 3.8+
+
+## 🔄 Migration from v2.0.0
+
+If you're upgrading from v2.0.0, see the [Reorganization Summary](REORGANIZATION_SUMMARY.md) for details on the new architecture and migration guide. 

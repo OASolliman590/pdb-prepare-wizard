@@ -13,10 +13,10 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="pdb-prepare-wizard",
-    version="2.1.0",
+    version="3.0.0",
     author="Molecular Docking Pipeline",
     author_email="",
-    description="A comprehensive tool for preparing PDB files for molecular docking studies and analyzing docking results",
+    description="A comprehensive tool for preparing PDB files for molecular docking studies with advanced PLIP integration and comprehensive interaction analysis",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="",
@@ -36,7 +36,10 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "pdb-prepare-wizard=PDP_prep_improved:main",
+            "pdb-prepare-wizard=main:main",
+            "pdb-wizard-interactive=interactive_pipeline:run_interactive_pipeline",
+            "pdb-wizard-cli=cli_pipeline:main",
+            "pdb-wizard-batch=batch_pdb_preparation:main",
             "post-docking-analysis=post_docking_analysis.cli:main",
         ],
     },
