@@ -1,26 +1,23 @@
 """
 Main pipeline module for post-docking analysis.
 """
-import os
 import sys
 from pathlib import Path
 import pandas as pd
-import numpy as np
 
 # Add the docking_analysis directory to the path so we can import its scripts
 docking_analysis_path = Path(__file__).parent.parent / "docking_analysis"
 sys.path.insert(0, str(docking_analysis_path))
 
-from .config import *
+from .config import INPUT_DIR, OUTPUT_DIR, GENERATE_VISUALIZATIONS, OUTPUT_PDB
 from .input_handler import find_docking_files, validate_complex_files
 from .docking_parser import parse_all_docking_results
-from .affinity_analyzer import analyze_binding_affinities, identify_top_performers, analyze_protein_ligand_breakdown
-from .report_generator import generate_all_reports
-from .visualizer import generate_all_visualizations
+from .affinity_analyzer import analyze_protein_ligand_breakdown
 from .rmsd_analyzer import calculate_rmsd_matrix, analyze_pose_clustering, analyze_conformational_diversity, create_rmsd_visualizations
 from .structure_quality import assess_structure_quality, create_quality_visualizations
 from .correlation_analyzer import analyze_vina_cnn_correlation, analyze_score_distributions, analyze_score_agreement, create_correlation_visualizations
 from .pymol_visualizer import PyMOLVisualizer, create_comparative_analysis
+from .pymol_generate import render_pymol_scene
 
 class PostDockingAnalysisPipeline:
     """
@@ -83,6 +80,26 @@ class PostDockingAnalysisPipeline:
         # Validate input
         if not self.validate_input():
             return False
+        
+        # Fast-path: GNINA results already aggregated to CSV
+        gnina_scores = self.input_dir / "gnina_out" / "all_scores.csv"
+        if gnina_scores.exists():
+            print("⚡ Detected GNINA scores CSV. Using streamlined analysis path.")
+            if not self._analyze_from_gnina_scores(gnina_scores):
+                return False
+            # Reports
+            if not self.generate_reports():
+                return False
+            # Visualizations
+            if GENERATE_VISUALIZATIONS:
+                if not self.generate_visualizations():
+                    return False
+            # Best poses extraction (supports GNINA SDFs)
+            if OUTPUT_PDB:
+                if not self.extract_best_poses_pdb():
+                    return False
+            print("✅ Post-Docking Analysis (GNINA fast-path) completed successfully!")
+            return True
             
         # Step 1: Find docking files
         print("🔍 Finding docking files...")
@@ -109,9 +126,8 @@ class PostDockingAnalysisPipeline:
             return False
             
         # Step 3: Analyze binding affinities
-        if ANALYZE_BINDING_AFFINITY:
-            if not self.analyze_binding_affinities():
-                return False
+        if not self.analyze_binding_affinities():
+            return False
                 
         # Step 4: Generate reports
         if not self.generate_reports():
@@ -286,7 +302,7 @@ class PostDockingAnalysisPipeline:
         
         # Save summary report
         summary_file = reports_dir / "summary_report.txt"
-        with open(summary_file, 'w') as f:
+        with open(summary_file, 'w', encoding='utf-8') as f:
             f.write('\n'.join(summary_lines))
         print(f"✅ Summary report saved to: {summary_file}")
         
@@ -320,7 +336,7 @@ class PostDockingAnalysisPipeline:
         best_poses = self.results['best_poses']
         
         # Create binding affinity distribution plot
-        fig, ax = plt.subplots(figsize=(12, 8))
+        _fig, ax = plt.subplots(figsize=(12, 8))
         sns.histplot(best_poses['vina_affinity'], kde=True, ax=ax)
         ax.set_xlabel('Binding Affinity (kcal/mol)')
         ax.set_ylabel('Frequency')
@@ -332,7 +348,7 @@ class PostDockingAnalysisPipeline:
         print(f"✅ Binding affinity plot saved to: {plot_file}")
         
         # Create top performers plot
-        fig, ax = plt.subplots(figsize=(12, 8))
+        _fig2, ax = plt.subplots(figsize=(12, 8))
         top_10 = best_poses.head(10)
         sns.barplot(data=top_10, x='vina_affinity', y='complex_name', ax=ax)
         ax.set_xlabel('Binding Affinity (kcal/mol)')
@@ -358,14 +374,26 @@ class PostDockingAnalysisPipeline:
         """
         print("🔬 Extracting best poses as PDB files...")
         
-        # Check if Open Babel is available
+        # Prefer GNINA SDF-based extraction when a gnina_out folder exists
         try:
-            from openbabel import pybel
+            from .pose_extractor import extract_best_poses_from_gnina
+            gnina_dir = self.input_dir / "gnina_out"
+            if gnina_dir.exists():
+                written = extract_best_poses_from_gnina(self.input_dir, self.output_dir)
+                if written > 0:
+                    return True
+                else:
+                    print("⚠️  GNINA-based extraction wrote 0 files; falling back to PDBQT extraction")
+        except Exception as e:
+            print(f"⚠️  GNINA-based extraction unavailable: {e}")
+        
+        # Fallback: extract from Vina PDBQT outputs if available
+        try:
+            from openbabel import pybel  # noqa: F401
         except ImportError:
             print("⚠️  Open Babel not available - PDB extraction skipped")
             return True
         
-        # Create output directory
         poses_dir = self.output_dir / "best_poses_pdb"
         poses_dir.mkdir(exist_ok=True)
         
@@ -376,7 +404,6 @@ class PostDockingAnalysisPipeline:
             complex_name = row['complex_name']
             pose_number = int(row['pose'])
             
-            # Find the complex info
             complex_info = None
             for comp in self.complexes:
                 if comp['name'] == complex_name:
@@ -388,7 +415,6 @@ class PostDockingAnalysisPipeline:
                 continue
                 
             try:
-                # Extract PDB from PDBQT
                 pdb_content = self._extract_pose_from_pdbqt(
                     complex_info['docking_result'], 
                     pose_number,
@@ -397,9 +423,8 @@ class PostDockingAnalysisPipeline:
                 )
                 
                 if pdb_content:
-                    # Save PDB file
                     pdb_file = poses_dir / f"{complex_name}_pose{pose_number}.pdb"
-                    with open(pdb_file, 'w') as f:
+                    with open(pdb_file, 'w', encoding='utf-8') as f:
                         f.write(pdb_content)
                     extracted_count += 1
                     print(f"✅ Extracted {complex_name} pose {pose_number}")
@@ -410,6 +435,14 @@ class PostDockingAnalysisPipeline:
                 print(f"❌ Error extracting {complex_name} pose {pose_number}: {e}")
         
         print(f"✅ Extracted {extracted_count} best poses as PDB files to: {poses_dir}")
+        
+        # Optional: auto-render PyMOL PNGs for each extracted pose if PyMOL is available
+        try:
+            rendered_dir = self.output_dir / "pymol_renders"
+            for pdb_file in poses_dir.glob("*.pdb"):
+                render_pymol_scene(pdb_file, rendered_dir, pdb_file.stem)
+        except Exception as e:
+            print(f"⚠️  Skipping PyMOL auto-render: {e}")
         return True
         
     def _extract_pose_from_pdbqt(self, pdbqt_file, pose_number, receptor_file, complex_name):
@@ -567,7 +600,7 @@ class PostDockingAnalysisPipeline:
             # Create RMSD visualizations
             viz_dir = self.output_dir / "visualizations"
             viz_dir.mkdir(exist_ok=True)
-            rmsd_viz_files = create_rmsd_visualizations(
+            create_rmsd_visualizations(
                 clustering_results, diversity_results, viz_dir
             )
             
@@ -632,7 +665,7 @@ class PostDockingAnalysisPipeline:
             # Create quality visualizations
             viz_dir = self.output_dir / "visualizations"
             viz_dir.mkdir(exist_ok=True)
-            quality_viz_files = create_quality_visualizations(quality_results, viz_dir)
+            create_quality_visualizations(quality_results, viz_dir)
             
             # Save quality reports
             reports_dir = self.output_dir / "reports"
@@ -695,7 +728,7 @@ class PostDockingAnalysisPipeline:
             # Create correlation visualizations
             viz_dir = self.output_dir / "visualizations"
             viz_dir.mkdir(exist_ok=True)
-            correlation_viz_files = create_correlation_visualizations(
+            create_correlation_visualizations(
                 correlation_results, distribution_results, agreement_results, viz_dir
             )
             
@@ -777,6 +810,50 @@ class PostDockingAnalysisPipeline:
                 
         except Exception as e:
             print(f"❌ Error creating PyMOL visualizations: {e}")
+            return False
+
+    def _analyze_from_gnina_scores(self, scores_csv: Path):
+        """
+        Streamlined analysis when GNINA all_scores.csv is available.
+        Populates self.results with full_data, best_poses, summary_stats, top_overall.
+        """
+        try:
+            print("🔍 Loading GNINA scores CSV...")
+            df = pd.read_csv(scores_csv)
+            if df.empty:
+                print("❌ GNINA scores CSV is empty")
+                return False
+            # Normalize columns
+            required = {'tag', 'mode', 'vina_affinity'}
+            if not required.issubset(set(df.columns)):
+                print("❌ GNINA scores CSV missing required columns")
+                return False
+            df['complex_name'] = df['tag']
+            df['pose'] = df['mode']
+            full_df = df[['complex_name', 'pose', 'vina_affinity']].copy()
+            # Best poses per tag
+            best_poses = df.loc[df.groupby('tag')['vina_affinity'].idxmin()].copy()
+            best_poses = best_poses.sort_values('vina_affinity')
+            best_poses.rename(columns={'tag': 'complex_name', 'mode': 'pose'}, inplace=True)
+            best_poses = best_poses[['complex_name', 'pose', 'vina_affinity']]
+            # Summary
+            summary_stats = full_df.groupby('complex_name').agg({
+                'vina_affinity': ['min', 'max', 'mean', 'std']
+            }).round(3)
+            summary_stats.columns = ['_'.join(col).strip() for col in summary_stats.columns]
+            summary_stats = summary_stats.reset_index()
+            # Top
+            top_overall = best_poses.head(10)[['complex_name', 'vina_affinity', 'pose']]
+            self.results = {
+                'full_data': full_df,
+                'best_poses': best_poses,
+                'summary_stats': summary_stats,
+                'top_overall': top_overall
+            }
+            print(f"✅ GNINA scores loaded: {len(full_df)} poses, {len(best_poses)} complexes")
+            return True
+        except Exception as e:
+            print(f"❌ Error reading GNINA scores: {e}")
             return False
 
 

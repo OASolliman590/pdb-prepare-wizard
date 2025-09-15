@@ -28,6 +28,18 @@ python -m post_docking_analysis
 python -m post_docking_analysis -i /path/to/docking/results -o /path/to/output
 ```
 
+### GNINA Fast Path (recommended)
+
+If your project has `gnina_out/all_scores.csv` with GNINA scores along with `gnina_out/*_top.sdf` and a `receptors/` folder of receptor `.pdbqt` files, the pipeline automatically switches to a streamlined path:
+
+```bash
+python -m post_docking_analysis -i /path/to/project
+# Steps performed:
+# 1) Analyze GNINA scores
+# 2) Generate reports and visualizations
+# 3) Extract best poses as complex PDBs into output/best_poses_pdb
+```
+
 ### Use a Configuration File
 
 Create a JSON configuration file (see example below) and run:
@@ -145,6 +157,7 @@ output_directory/
 │   ├── binding_affinity_distribution.png
 │   ├── top_performers.png
 │   └── vina_cnn_comparison.png
+├── best_poses_pdb/           # Extracted best poses as complex PDBs (receptor A, ligand B)
 └── pipeline.log              # Pipeline execution log
 ```
 

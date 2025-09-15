@@ -1,0 +1,41 @@
+{
+  "input": {
+    "ligands": {
+      "path": "./ligands_raw",
+      "formats": [
+        "sdf",
+        "mol2",
+        "pdb"
+      ],
+      "in_same_folder": false
+    },
+    "receptors": {
+      "path": "/var/folders/fl/mby0xwb17_5g9w71yptmmvwm0000gn/T/tmpdm_2crx3",
+      "formats": [
+        "pdb"
+      ],
+      "in_same_folder": false
+    }
+  },
+  "output": {
+    "ligands": "./ligands_prep",
+    "receptors": "/Users/omara.soliman/Desktop/Research/41-Sertaline_Pyrazole_derivatives/1-Pre_Limnary/autodock_test/receptors_prep",
+    "logs": "./logs"
+  },
+  "preparation": {
+    "force_field": "AMBER",
+    "ph": 7.4,
+    "allow_bad_res": true,
+    "default_altloc": "A"
+  },
+  "plip": {
+    "enabled": true,
+    "binding_site_detection": true,
+    "interaction_analysis": true
+  },
+  "quality_control": {
+    "validate_outputs": true,
+    "check_file_sizes": true,
+    "min_file_size_kb": 1
+  }
+}

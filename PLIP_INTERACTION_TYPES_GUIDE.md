@@ -153,3 +153,4 @@ The system automatically detects unknown interaction types and reports them:
 - **v2.0**: Added halogen bonds support
 - **v3.0**: Comprehensive implementation with all known interaction types
 - **v3.1**: Added unknown type detection and future-proofing
+

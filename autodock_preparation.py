@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import shutil
+import tempfile
 
 @dataclass
 class PreparationConfig:
@@ -343,11 +344,12 @@ class AutoDockPreparationPipeline:
 def main():
     """Main function for command-line usage"""
     import argparse
+    import tempfile
     
     parser = argparse.ArgumentParser(description="Enhanced AutoDock Preparation Pipeline")
     parser.add_argument("--config", help="Configuration file path")
-    parser.add_argument("--ligands-input", help="Input directory for ligands")
-    parser.add_argument("--receptors-input", help="Input directory for receptors")
+    parser.add_argument("--ligands-input", help="Input directory or file for ligands")
+    parser.add_argument("--receptors-input", help="Input directory or file for receptors")
     parser.add_argument("--ligands-output", help="Output directory for prepared ligands")
     parser.add_argument("--receptors-output", help="Output directory for prepared receptors")
     parser.add_argument("--force-field", default="AMBER", help="Force field for PDB2PQR")
@@ -356,11 +358,21 @@ def main():
     parser.add_argument("--create-config", action="store_true", help="Create configuration file and exit")
     
     args = parser.parse_args()
-    
+
+    def handle_input_path(input_path):
+        if input_path and Path(input_path).is_file():
+            temp_dir = tempfile.mkdtemp()
+            shutil.copy(input_path, temp_dir)
+            return temp_dir
+        return input_path
+
+    ligands_input = handle_input_path(args.ligands_input)
+    receptors_input = handle_input_path(args.receptors_input)
+
     # Create configuration
     config = PreparationConfig(
-        ligands_input=args.ligands_input or "./ligands_raw",
-        receptors_input=args.receptors_input or "./receptors_raw",
+        ligands_input=ligands_input or "./ligands_raw",
+        receptors_input=receptors_input or "./receptors_raw",
         ligands_output=args.ligands_output or "./ligands_prep", 
         receptors_output=args.receptors_output or "./receptors_prep",
         force_field=args.force_field,
@@ -390,7 +402,7 @@ def main():
         results = pipeline.analyze_preparation_results(config.receptors_output)
         pipeline.generate_preparation_report(results)
         
-        print(f"Preparation completed successfully!")
+        print("Preparation completed successfully!")
         print(f"Ligands prepared: {results['ligands']['count']}")
         print(f"Receptors prepared: {results['receptors']['count']}")
         if results['plip_analysis']['available']:
