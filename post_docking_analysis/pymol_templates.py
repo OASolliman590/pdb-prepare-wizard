@@ -44,6 +44,12 @@ set label_font_id, 13
 set label_outline_color, grey70
 set label_position, (0,0,3)
 
+# Show interactions (polar contacts) as dashed lines
+distance hbonds, (ligand and name N+O), (interacting_res and name N+O), 3.6, 2
+set dash_color, black
+set dash_width, 2.0
+hide labels, hbonds
+
 # Pocket mesh around interacting residues
 create pocket_obj, interacting_res
 show mesh, pocket_obj
