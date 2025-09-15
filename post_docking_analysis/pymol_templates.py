@@ -43,6 +43,15 @@ set label_font_id, 13
 set label_outline_color, grey70
 set label_position, (0,0,3)
 
+# Show interaction lines (hydrogen bonds and polar contacts)
+distance hbonds, (ligand and name N+O), (interacting_res and name N+O), 3.6, 2
+set dash_color, blue
+set dash_width, 2.0
+set dash_gap, 0.2
+set dash_length, 0.1
+set dash_round_ends, 1
+hide labels, hbonds
+
 create pocket_obj, interacting_res
 show mesh, pocket_obj
 color palecyan, pocket_obj
@@ -50,7 +59,8 @@ set mesh_width, 0.2
 set transparency, 0.10, pocket_obj
 set mesh_mode, 1
 
-set bg_rgb, white
+# Ensure pure white background
+set bg_rgb, [1,1,1]
 set ray_shadows, 0
 set depth_cue, 0
 set antialias, 2
