@@ -18,6 +18,7 @@ from .structure_quality import assess_structure_quality, create_quality_visualiz
 from .correlation_analyzer import analyze_vina_cnn_correlation, analyze_score_distributions, analyze_score_agreement, create_correlation_visualizations
 from .pymol_visualizer import PyMOLVisualizer, create_comparative_analysis
 from .pymol_generate import render_pymol_scene
+from .pandamap_integration import PandaMapAnalyzer
 
 class PostDockingAnalysisPipeline:
     """
@@ -98,6 +99,9 @@ class PostDockingAnalysisPipeline:
             if OUTPUT_PDB:
                 if not self.extract_best_poses_pdb():
                     return False
+            # PandaMap interaction analysis
+            if not self.generate_pandamap_interactions():
+                return False
             print("✅ Post-Docking Analysis (GNINA fast-path) completed successfully!")
             return True
             
@@ -161,6 +165,10 @@ class PostDockingAnalysisPipeline:
             
         # Step 11: Create PyMOL visualizations
         if not self.create_pymol_visualizations():
+            return False
+            
+        # Step 12: Generate PandaMap interaction visualizations
+        if not self.generate_pandamap_interactions():
             return False
                 
         print("✅ Post-Docking Analysis Pipeline completed successfully!")
@@ -810,6 +818,54 @@ class PostDockingAnalysisPipeline:
                 
         except Exception as e:
             print(f"❌ Error creating PyMOL visualizations: {e}")
+            return False
+
+    def generate_pandamap_interactions(self):
+        """
+        Generate protein-ligand interaction visualizations using PandaMap.
+        
+        Returns
+        -------
+        bool
+            True if analysis successful, False otherwise
+        """
+        print("🐼 Generating PandaMap interaction visualizations...")
+        
+        try:
+            # Check if best poses PDB files exist
+            poses_dir = self.output_dir / "best_poses_pdb"
+            if not poses_dir.exists():
+                print("⚠️ Best poses PDB files not found - skipping PandaMap analysis")
+                return True
+            
+            # Create PandaMap output directory
+            pandamap_dir = self.output_dir / "pandamap_analysis"
+            
+            # Initialize PandaMap analyzer
+            analyzer = PandaMapAnalyzer(conda_env="pandamap")
+            
+            # Generate comprehensive analysis
+            summary = analyzer.generate_comprehensive_analysis(
+                poses_dir=poses_dir,
+                output_dir=pandamap_dir,
+                ligand_name="UNK"
+            )
+            
+            # Store results
+            if not hasattr(self, 'results'):
+                self.results = {}
+            self.results['pandamap_analysis'] = summary
+            
+            print(f"✅ PandaMap analysis completed:")
+            print(f"   📊 Generated {summary['generated_2d_maps']} 2D interaction maps")
+            print(f"   🌐 Generated {summary['generated_3d_visualizations']} 3D HTML visualizations")
+            print(f"   📄 Generated {summary['generated_reports']} detailed reports")
+            print(f"   📂 Output directory: {pandamap_dir}")
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Error generating PandaMap interactions: {e}")
             return False
 
     def _analyze_from_gnina_scores(self, scores_csv: Path):
