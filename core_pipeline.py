@@ -24,10 +24,18 @@ from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Any
 import warnings
 import time
-import logging
 from file_validators import FileValidator, FileValidationError
 from security_utils import SecurityValidator, SecurityError
+from logging_config import get_logger, log_section, log_step, LogTimer
+from version_tracker import get_metadata, save_metadata, get_version_string
+from exceptions import (
+    PDBDownloadError, LigandNotFoundError, MissingAtomsError,
+    PocketAnalysisError, OutputWriteError, DependencyError
+)
 warnings.filterwarnings("ignore")
+
+# Initialize logger for this module
+logger = get_logger(__name__)
 
 # Add Excel support
 try:
@@ -66,11 +74,11 @@ def retry_with_backoff(max_retries=4, base_delay=2.0):
                     last_exception = e
                     if attempt < max_retries - 1:
                         delay = base_delay * (2 ** attempt)
-                        print(f"⚠️  Attempt {attempt + 1}/{max_retries} failed: {e}")
-                        print(f"   Retrying in {delay:.1f} seconds...")
+                        logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+                        logger.info(f"Retrying in {delay:.1f} seconds...")
                         time.sleep(delay)
                     else:
-                        print(f"❌ All {max_retries} attempts failed")
+                        logger.error(f"All {max_retries} attempts failed")
             raise last_exception
         return wrapper
     return decorator
@@ -89,35 +97,36 @@ class MolecularDockingPipeline:
     def __init__(self, output_dir: str = "pipeline_output"):
         """
         Initialize the molecular docking pipeline.
-        
+
         Args:
             output_dir (str): Directory to store all output files
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
-        print(f"✓ Pipeline initialized. Output directory: {self.output_dir}")
-        
+        logger.info(f"Pipeline initialized. Output directory: {self.output_dir}")
+        logger.info(get_version_string())
+
         # Validate required packages
         self._validate_dependencies()
-        
+
     def _validate_dependencies(self):
         """Validate that all required dependencies are available."""
         try:
             import numpy as np
             import pandas as pd
             from Bio.PDB import PDBParser
-            print("✓ All core dependencies available")
+            logger.info("All core dependencies available")
         except ImportError as e:
-            print(f"❌ Missing dependency: {e}")
-            sys.exit(1)
-            
+            logger.error(f"Missing dependency: {e}")
+            raise DependencyError(str(e), "core pipeline functionality")
+
         # Check for optional PLIP
         try:
             import plip
-            print("✓ PLIP available for advanced interaction analysis")
+            logger.info("PLIP available for advanced interaction analysis")
             self.plip_available = True
         except ImportError:
-            print("⚠️  PLIP not available - will use distance-based analysis")
+            logger.warning("PLIP not available - will use distance-based analysis")
             self.plip_available = False
     
     @retry_with_backoff(max_retries=4, base_delay=2.0)
@@ -574,34 +583,51 @@ class MolecularDockingPipeline:
 
     def generate_summary_report(self, results: Dict[str, Any], pdb_id: str) -> str:
         """
-        Generate a comprehensive summary report.
-        
+        Generate a comprehensive summary report with version metadata.
+
         Args:
             results (Dict[str, Any]): Analysis results
             pdb_id (str): PDB identifier
-            
+
         Returns:
             str: Path to generated report file
         """
-        print("📋 Generating summary report...")
-        
+        logger.info("Generating summary report...")
+
         try:
             report_filename = self.output_dir / f"{pdb_id}_pipeline_results.csv"
-            
+
+            # Get version metadata
+            metadata = get_metadata()
+
             # Prepare data for CSV
             report_data = []
+
+            # Add metadata first
+            report_data.append(['# Metadata', ''])
+            report_data.append(['pipeline_version', metadata['pipeline_version']])
+            report_data.append(['python_version', metadata['python_version']])
+            report_data.append(['timestamp', metadata['timestamp']])
+            report_data.append(['git_commit', metadata['git']['commit'][:8]])
+            report_data.append(['', ''])  # Blank line
+
+            # Add analysis results
+            report_data.append(['# Analysis Results', ''])
             for key, value in results.items():
                 report_data.append([key, value])
-            
+
             # Save as CSV
             df = pd.DataFrame(report_data, columns=['Property', 'Value'])
             df.to_csv(report_filename, index=False)
-            
-            print(f"✓ Summary report saved as: {report_filename}")
+
+            # Save separate metadata file
+            save_metadata(report_filename)
+
+            logger.info(f"Summary report saved: {report_filename}")
             return str(report_filename)
         except Exception as e:
-            print(f"❌ Error generating summary report: {e}")
-            raise
+            logger.exception(f"Error generating summary report: {e}")
+            raise OutputWriteError(str(report_filename), str(e))
 
 def parse_plip_text_report(report_file: str, ligand_name: str, chain_id: str, res_id: int) -> Optional[Dict]:
     """
