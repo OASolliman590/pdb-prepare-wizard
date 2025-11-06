@@ -11,6 +11,11 @@ from sklearn.cluster import KMeans, DBSCAN
 from sklearn.preprocessing import StandardScaler
 import matplotlib.pyplot as plt
 import seaborn as sns
+from .config import RANDOM_SEED, NUMPY_SEED, SKLEARN_SEED
+
+# Set seeds for reproducibility
+if NUMPY_SEED is not None:
+    np.random.seed(NUMPY_SEED)
 
 def calculate_rmsd_matrix(poses_data: pd.DataFrame) -> np.ndarray:
     """
@@ -74,11 +79,15 @@ def analyze_pose_clustering(poses_data: pd.DataFrame, rmsd_matrix: np.ndarray,
     features = rmsd_matrix
     
     if method == 'kmeans':
-        clusterer = KMeans(n_clusters=n_clusters, random_state=42)
+        # Use configured seed for reproducibility
+        random_state = SKLEARN_SEED if SKLEARN_SEED is not None else 42
+        clusterer = KMeans(n_clusters=n_clusters, random_state=random_state)
         cluster_labels = clusterer.fit_predict(features)
+        print(f"✓ K-means clustering with random_state={random_state} for reproducibility")
     elif method == 'dbscan':
         clusterer = DBSCAN(eps=2.0, min_samples=2)
         cluster_labels = clusterer.fit_predict(features)
+        print(f"✓ DBSCAN clustering (deterministic)")
     else:
         raise ValueError(f"Unknown clustering method: {method}")
     

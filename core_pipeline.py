@@ -23,6 +23,10 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Tuple, Dict, Optional, Any
 import warnings
+import time
+import logging
+from file_validators import FileValidator, FileValidationError
+from security_utils import SecurityValidator, SecurityError
 warnings.filterwarnings("ignore")
 
 # Add Excel support
@@ -43,6 +47,33 @@ except ImportError as e:
     print(f"❌ Error importing Biopython: {e}")
     print("Please install Biopython: pip install biopython")
     sys.exit(1)
+
+def retry_with_backoff(max_retries=4, base_delay=2.0):
+    """
+    Decorator to retry a function with exponential backoff.
+
+    Args:
+        max_retries: Maximum number of retry attempts
+        base_delay: Base delay in seconds (doubles each retry)
+    """
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    last_exception = e
+                    if attempt < max_retries - 1:
+                        delay = base_delay * (2 ** attempt)
+                        print(f"⚠️  Attempt {attempt + 1}/{max_retries} failed: {e}")
+                        print(f"   Retrying in {delay:.1f} seconds...")
+                        time.sleep(delay)
+                    else:
+                        print(f"❌ All {max_retries} attempts failed")
+            raise last_exception
+        return wrapper
+    return decorator
 
 class MolecularDockingPipeline:
     """
@@ -89,45 +120,61 @@ class MolecularDockingPipeline:
             print("⚠️  PLIP not available - will use distance-based analysis")
             self.plip_available = False
     
+    @retry_with_backoff(max_retries=4, base_delay=2.0)
     def fetch_pdb(self, pdb_id: str) -> str:
         """
-        Download PDB file from RCSB PDB database.
-        
+        Download PDB file from RCSB PDB database with retry logic.
+
         Args:
             pdb_id (str): PDB identifier (e.g., '1ABC')
-            
+
         Returns:
             str: Path to downloaded PDB file
+
+        Raises:
+            Exception: After all retry attempts are exhausted
         """
         print(f"🔄 Fetching PDB {pdb_id}...")
-        try:
-            pdbl = PDBList()
-            filename = pdbl.retrieve_pdb_file(
-                pdb_id.lower(), 
-                pdir=str(self.output_dir), 
-                file_format='pdb'
-            )
-            
-            # Rename to simpler format
-            new_filename = self.output_dir / f"{pdb_id.upper()}.pdb"
-            os.rename(filename, new_filename)
-            print(f"✓ Downloaded: {new_filename}")
-            return str(new_filename)
-        except Exception as e:
-            print(f"❌ Failed to download PDB {pdb_id}: {e}")
-            raise
+        pdbl = PDBList()
+        filename = pdbl.retrieve_pdb_file(
+            pdb_id.lower(),
+            pdir=str(self.output_dir),
+            file_format='pdb'
+        )
+
+        # Rename to simpler format
+        new_filename = self.output_dir / f"{pdb_id.upper()}.pdb"
+
+        # Clean up any existing file first
+        if new_filename.exists():
+            new_filename.unlink()
+
+        os.rename(filename, new_filename)
+        print(f"✓ Downloaded: {new_filename}")
+        return str(new_filename)
 
     def enumerate_hetatms(self, pdb_file: str) -> Tuple[List[Tuple], List[str]]:
         """
         List all HETATM residues in the PDB file for user selection.
-        
+
         Args:
             pdb_file (str): Path to PDB file
-            
+
         Returns:
             Tuple[List[Tuple], List[str]]: (detailed hetatm info, unique hetatm types)
         """
         print(f"🔄 Enumerating HETATMs in {pdb_file}...")
+
+        # Validate PDB file format
+        try:
+            validation_result = FileValidator.validate_file(pdb_file, 'pdb', check_structure=True)
+            if validation_result['warnings']:
+                for warning in validation_result['warnings']:
+                    print(f"⚠️  {warning}")
+        except FileValidationError as e:
+            print(f"❌ PDB validation failed: {e}")
+            return [], []
+
         try:
             parser = PDBParser(QUIET=True)
             structure = parser.get_structure('protein', pdb_file)

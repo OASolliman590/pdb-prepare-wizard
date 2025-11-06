@@ -8,8 +8,17 @@ from setuptools import setup, find_packages
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
+# Read required dependencies
 with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
+
+# Read optional dependencies
+with open("requirements-optional.txt", "r", encoding="utf-8") as fh:
+    optional_requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#") and not line.startswith("# ")]
+
+# Read development dependencies
+with open("requirements-dev.txt", "r", encoding="utf-8") as fh:
+    dev_requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
     name="pdb-prepare-wizard",
@@ -34,6 +43,11 @@ setup(
     ],
     python_requires=">=3.8",
     install_requires=requirements,
+    extras_require={
+        'optional': optional_requirements,
+        'dev': dev_requirements,
+        'all': optional_requirements + dev_requirements,
+    },
     entry_points={
         "console_scripts": [
             "pdb-prepare-wizard=main:main",

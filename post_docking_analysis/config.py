@@ -1,5 +1,10 @@
 # Configuration for Post-Docking Analysis Pipeline
 
+# Reproducibility
+RANDOM_SEED = 42  # Set to None for non-deterministic behavior
+NUMPY_SEED = 42
+SKLEARN_SEED = 42
+
 # Input/Output Directories
 # Use absolute paths or paths relative to the execution directory
 INPUT_DIR = ""

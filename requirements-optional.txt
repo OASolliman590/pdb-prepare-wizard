@@ -1,0 +1,24 @@
+# Optional Dependencies
+# Install with: pip install -r requirements-optional.txt
+
+# Advanced interaction analysis
+plip>=2.2.0
+
+# Visualization
+matplotlib>=3.5.0
+seaborn>=0.11.0
+
+# Development and exploration
+jupyter>=1.0.0
+
+# Excel output support
+openpyxl>=3.0.0
+
+# Molecular file format conversion (requires conda or separate install)
+# openbabel>=3.0.0
+
+# AutoDock preparation tools (requires separate installation)
+# meeko>=0.3.0
+
+# PyMOL for 3D visualization (requires separate installation)
+# pymol>=2.5.0

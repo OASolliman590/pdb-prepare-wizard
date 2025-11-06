@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass
 import shutil
 import tempfile
+from security_utils import SecurityValidator, SecurityError, validate_output_directory
 
 @dataclass
 class PreparationConfig:
@@ -184,15 +185,22 @@ class AutoDockPreparationPipeline:
                 sdf_file = Path(output_dir) / f"{base_name}_temp.sdf"
                 
                 try:
+                    # Validate and sanitize file paths
+                    ligand_pdb_safe = str(SecurityValidator.validate_path(ligand_pdb, must_exist=True))
+                    sdf_file_safe = str(SecurityValidator.validate_path(sdf_file, base_dir=output_dir))
+                    pdbqt_file_safe = str(SecurityValidator.validate_path(pdbqt_file, base_dir=output_dir))
+
                     # PDB → SDF (with explicit hydrogens)
-                    subprocess.run([
-                        "obabel", ligand_pdb, "-O", str(sdf_file), "-h"
-                    ], check=True, capture_output=True)
-                    
+                    cmd_obabel = SecurityValidator.sanitize_command_args([
+                        "obabel", ligand_pdb_safe, "-O", sdf_file_safe, "-h"
+                    ])
+                    subprocess.run(cmd_obabel, check=True, capture_output=True)
+
                     # SDF → PDBQT
-                    subprocess.run([
-                        "mk_prepare_ligand.py", "-i", str(sdf_file), "-o", str(pdbqt_file)
-                    ], check=True, capture_output=True)
+                    cmd_prepare = SecurityValidator.sanitize_command_args([
+                        "mk_prepare_ligand.py", "-i", sdf_file_safe, "-o", pdbqt_file_safe
+                    ])
+                    subprocess.run(cmd_prepare, check=True, capture_output=True)
                     
                     # Clean up intermediate file
                     sdf_file.unlink()

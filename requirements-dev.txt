@@ -1,0 +1,21 @@
+# Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Testing
+pytest>=7.0.0
+pytest-cov>=3.0.0
+pytest-mock>=3.6.0
+
+# Code quality
+black>=22.0.0
+flake8>=4.0.0
+pylint>=2.12.0
+mypy>=0.931
+
+# Documentation
+sphinx>=4.3.0
+sphinx-rtd-theme>=1.0.0
+
+# Performance profiling
+memory-profiler>=0.60.0
+line-profiler>=3.5.0
