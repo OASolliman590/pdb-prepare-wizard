@@ -1,0 +1,64 @@
+# Example Pipeline Configuration
+# ===============================
+
+network:
+  max_retries: 4
+  retry_base_delay: 2.0
+  connection_timeout: 30
+  download_timeout: 300
+
+scientific:
+  # Distance parameters (Angstroms)
+  interaction_cutoff: 5.0
+  pocket_radius: 10.0
+  clash_cutoff: 2.0
+  interaction_sphere_radius: 5.0
+  hydrophobic_cutoff: 8.0
+
+  # Druggability scoring weights (must sum to 1.0)
+  druggability_volume_weight: 0.33
+  druggability_hydrophobic_weight: 0.33
+  druggability_electrostatic_weight: 0.34
+
+  # Druggability thresholds
+  druggability_excellent_threshold: 0.7
+  druggability_good_threshold: 0.5
+  druggability_moderate_threshold: 0.3
+
+clustering:
+  method: kmeans
+  n_clusters: 3
+  rmsd_cutoff: 2.0
+  eps: 2.0
+  min_samples: 2
+  random_seed: 42
+  numpy_seed: 42
+  sklearn_seed: 42
+
+output:
+  generate_csv: true
+  generate_excel: true
+  generate_json: true
+  generate_pdb: true
+  generate_visualizations: true
+  visualization_dpi: 300
+  pymol_ray_trace: false
+  include_metadata: true
+  include_git_info: true
+  include_environment: false
+
+logging:
+  level: INFO
+  console_output: true
+  file_output: true
+  use_colors: true
+  log_dir: logs
+
+performance:
+  enable_parallel: false
+  n_jobs: 4
+  batch_size: 10
+  explicit_cleanup: true
+  gc_frequency: 10
+  enable_rmsd_cache: true
+  cache_dir: .cache

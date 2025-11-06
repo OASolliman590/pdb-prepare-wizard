@@ -1,0 +1,10 @@
+# Example Tasks File
+# Format: PDB_ID,LIGAND,CHAIN,RES_ID
+# Lines starting with # are comments
+
+# ATP-binding proteins
+7CMD,ATP,A,500
+1ATP,ATP,A,500
+
+# NAD-binding proteins
+1A2B,NAD,A,300

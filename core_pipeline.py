@@ -28,6 +28,8 @@ from file_validators import FileValidator, FileValidationError
 from security_utils import SecurityValidator, SecurityError
 from logging_config import get_logger, log_section, log_step, LogTimer
 from version_tracker import get_metadata, save_metadata, get_version_string
+from unified_config import PipelineConfig
+from memory_manager import MemoryMonitor, cleanup_biopython_structure
 from exceptions import (
     PDBDownloadError, LigandNotFoundError, MissingAtomsError,
     PocketAnalysisError, OutputWriteError, DependencyError
@@ -94,17 +96,37 @@ class MolecularDockingPipeline:
     - Analyze pocket properties and druggability
     """
     
-    def __init__(self, output_dir: str = "pipeline_output"):
+    def __init__(
+        self,
+        output_dir: str = "pipeline_output",
+        config: Optional[PipelineConfig] = None,
+        enable_memory_monitor: bool = True
+    ):
         """
         Initialize the molecular docking pipeline.
 
         Args:
             output_dir (str): Directory to store all output files
+            config: Pipeline configuration (uses defaults if None)
+            enable_memory_monitor: Enable memory monitoring
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(exist_ok=True)
+
+        # Load or create configuration
+        self.config = config or PipelineConfig()
+
+        # Initialize memory monitor
+        self.memory_monitor = None
+        if enable_memory_monitor:
+            self.memory_monitor = MemoryMonitor(
+                auto_gc=self.config.performance.explicit_cleanup,
+                gc_frequency=self.config.performance.gc_frequency
+            )
+
         logger.info(f"Pipeline initialized. Output directory: {self.output_dir}")
         logger.info(get_version_string())
+        logger.info(f"Configuration: interaction_cutoff={self.config.scientific.interaction_cutoff}Å")
 
         # Validate required packages
         self._validate_dependencies()
@@ -129,7 +151,6 @@ class MolecularDockingPipeline:
             logger.warning("PLIP not available - will use distance-based analysis")
             self.plip_available = False
     
-    @retry_with_backoff(max_retries=4, base_delay=2.0)
     def fetch_pdb(self, pdb_id: str) -> str:
         """
         Download PDB file from RCSB PDB database with retry logic.
@@ -141,26 +162,46 @@ class MolecularDockingPipeline:
             str: Path to downloaded PDB file
 
         Raises:
-            Exception: After all retry attempts are exhausted
+            PDBDownloadError: After all retry attempts are exhausted
         """
-        print(f"🔄 Fetching PDB {pdb_id}...")
-        pdbl = PDBList()
-        filename = pdbl.retrieve_pdb_file(
-            pdb_id.lower(),
-            pdir=str(self.output_dir),
-            file_format='pdb'
-        )
+        logger.info(f"Fetching PDB {pdb_id}...")
 
-        # Rename to simpler format
-        new_filename = self.output_dir / f"{pdb_id.upper()}.pdb"
+        # Retry logic using config
+        max_retries = self.config.network.max_retries
+        base_delay = self.config.network.retry_base_delay
+        last_exception = None
 
-        # Clean up any existing file first
-        if new_filename.exists():
-            new_filename.unlink()
+        for attempt in range(max_retries):
+            try:
+                pdbl = PDBList()
+                filename = pdbl.retrieve_pdb_file(
+                    pdb_id.lower(),
+                    pdir=str(self.output_dir),
+                    file_format='pdb'
+                )
 
-        os.rename(filename, new_filename)
-        print(f"✓ Downloaded: {new_filename}")
-        return str(new_filename)
+                # Rename to simpler format
+                new_filename = self.output_dir / f"{pdb_id.upper()}.pdb"
+
+                # Clean up any existing file first
+                if new_filename.exists():
+                    new_filename.unlink()
+
+                os.rename(filename, new_filename)
+                logger.info(f"Downloaded: {new_filename}")
+                return str(new_filename)
+
+            except Exception as e:
+                last_exception = e
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"Attempt {attempt + 1}/{max_retries} failed: {e}")
+                    logger.info(f"Retrying in {delay:.1f} seconds...")
+                    time.sleep(delay)
+                else:
+                    logger.error(f"All {max_retries} attempts failed")
+
+        raise PDBDownloadError(pdb_id=pdb_id, reason=str(last_exception))
 
     def enumerate_hetatms(self, pdb_file: str) -> Tuple[List[Tuple], List[str]]:
         """
@@ -316,22 +357,26 @@ class MolecularDockingPipeline:
             print(f"❌ Error cleaning PDB: {e}")
             raise
 
-    def distance_based_interaction_detection(self, pdb_file: str, ligand_name: str, 
-                                          chain_id: str, res_id: int, 
-                                          cutoff: float = 5.0) -> List[np.ndarray]:
+    def distance_based_interaction_detection(self, pdb_file: str, ligand_name: str,
+                                          chain_id: str, res_id: int,
+                                          cutoff: Optional[float] = None) -> List[np.ndarray]:
         """
         Detect interacting residues using distance-based approach.
-        
+
         Args:
             pdb_file (str): Path to PDB file
             ligand_name (str): Ligand residue name
             chain_id (str): Chain identifier
             res_id (int): Residue ID
-            cutoff (float): Distance cutoff in Angstroms
-            
+            cutoff (float): Distance cutoff in Angstroms (uses config default if None)
+
         Returns:
             List[np.ndarray]: List of coordinates of interacting atoms
         """
+        # Use config value if not specified
+        if cutoff is None:
+            cutoff = self.config.scientific.interaction_cutoff
+
         try:
             parser = PDBParser(QUIET=True)
             structure = parser.get_structure('protein', pdb_file)
@@ -462,8 +507,9 @@ class MolecularDockingPipeline:
             # Pocket Size and Shape Analysis
             print("📊 Analyzing pocket size and shape...")
             try:
-                # Geometric estimation based on interaction sphere
-                results['pocket_volume_A3'] = 4/3 * np.pi * (5.0**3)  # Assume 5Å interaction sphere
+                # Geometric estimation based on interaction sphere (using config radius)
+                sphere_radius = self.config.scientific.interaction_sphere_radius
+                results['pocket_volume_A3'] = 4/3 * np.pi * (sphere_radius**3)
             except Exception as e:
                 print(f"⚠️  Pocket volume analysis failed: {e}")
                 results['pocket_volume_A3'] = 'N/A'
@@ -485,7 +531,7 @@ class MolecularDockingPipeline:
                                     try:
                                         ca_atom = residue['CA']
                                         dist = np.linalg.norm(ca_atom.get_coord() - center_coords)
-                                        if dist <= 10.0:  # Within 10Å of pocket center
+                                        if dist <= self.config.scientific.pocket_radius:
                                             electrostatic_score += charged_residues[resname]
                                             nearby_charges += 1
                                     except:
@@ -532,38 +578,43 @@ class MolecularDockingPipeline:
             # Druggability Scoring
             print("💊 Calculating druggability score...")
             try:
-                # Simple druggability scoring based on multiple factors
-                druggability_factors = []
-                
+                # Druggability scoring based on weighted factors from config
+                druggability_components = {}
+
                 # Factor 1: Pocket volume (normalized)
                 if isinstance(results['pocket_volume_A3'], (int, float)):
                     vol_score = min(1.0, results['pocket_volume_A3'] / 1000.0)
-                    druggability_factors.append(vol_score)
-                
+                    druggability_components['volume'] = vol_score
+
                 # Factor 2: Hydrophobic character (normalized)
                 if isinstance(results['hydrophobic_score'], (int, float)):
                     hydro_score = min(1.0, results['hydrophobic_score'] / 10.0)
-                    druggability_factors.append(hydro_score)
-                
+                    druggability_components['hydrophobic'] = hydro_score
+
                 # Factor 3: Electrostatic balance (absolute value, inverted and normalized)
                 if isinstance(results['electrostatic_score'], (int, float)):
                     elec_score = max(0.0, 1.0 - abs(results['electrostatic_score']) / 5.0)
-                    druggability_factors.append(elec_score)
-                
-                if druggability_factors:
-                    druggability_score = np.mean(druggability_factors)
+                    druggability_components['electrostatic'] = elec_score
+
+                if druggability_components:
+                    # Weighted average using config weights
+                    druggability_score = (
+                        druggability_components.get('volume', 0) * self.config.scientific.druggability_volume_weight +
+                        druggability_components.get('hydrophobic', 0) * self.config.scientific.druggability_hydrophobic_weight +
+                        druggability_components.get('electrostatic', 0) * self.config.scientific.druggability_electrostatic_weight
+                    )
                     results['druggability_score'] = round(druggability_score, 3)
-                    
-                    # Interpretation
-                    if druggability_score >= 0.7:
+
+                    # Interpretation using config thresholds
+                    if druggability_score >= self.config.scientific.druggability_excellent_threshold:
                         interpretation = "Excellent"
-                    elif druggability_score >= 0.5:
-                        interpretation = "Good" 
-                    elif druggability_score >= 0.3:
+                    elif druggability_score >= self.config.scientific.druggability_good_threshold:
+                        interpretation = "Good"
+                    elif druggability_score >= self.config.scientific.druggability_moderate_threshold:
                         interpretation = "Moderate"
                     else:
                         interpretation = "Poor"
-                    
+
                     results['druggability_interpretation'] = interpretation
                     print(f"✓ Druggability score: {druggability_score:.3f} ({interpretation})")
                 else:
@@ -573,10 +624,16 @@ class MolecularDockingPipeline:
                 print(f"⚠️  Druggability scoring failed: {e}")
                 results['druggability_score'] = 'N/A'
                 results['druggability_interpretation'] = 'Unknown'
-            
+
             print("✓ Pocket analysis completed successfully")
+
+            # Cleanup BioPython structure
+            if self.memory_monitor:
+                cleanup_biopython_structure(structure)
+                self.memory_monitor.track_operation("pocket_analysis")
+
             return results
-            
+
         except Exception as e:
             print(f"❌ Pocket analysis failed: {e}")
             raise
