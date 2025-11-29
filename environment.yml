@@ -1,0 +1,21 @@
+name: pdb-prepare-wizard
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.9
+  - numpy
+  - pandas
+  - biopython
+  - plip
+  - matplotlib
+  - seaborn
+  - jupyter
+  - openbabel  # For ligand processing (SDF, MOL2, PDBQT conversions)
+  - scikit-learn  # For clustering and machine learning
+  - scipy  # For statistical analysis
+  - pip
+  - pip:
+    - plip
+    - openpyxl>=3.0.0 

@@ -1,0 +1,74 @@
+# PDB Batch Processing Configuration
+# This file defines multiple PDB entries for batch processing in the PDB Prepare Wizard
+
+# Global settings applied to all PDB entries unless overridden
+global_settings:
+  # Output directory for all results
+  output_directory: "batch_docking_preparation"
+  
+  # Default cleaning strategy
+  cleaning:
+    strategy: "common"  # Options: "all", "common", "none", or list of residues
+    common_residues: ["HOH", "NA", "CL", "SO4", "CA", "MG", "ZN", "FE", "CU", "MN"]
+  
+  # Active site analysis settings
+  analysis:
+    use_enhanced_coordinates: true
+    distance_cutoff: 5.0
+    method: "plip"  # Options: "plip", "distance"
+  
+  # AutoDock preparation settings
+  autodock:
+    force_field: "AMBER"
+    ph: 7.4
+    allow_bad_res: true
+    default_altloc: "A"
+
+# List of PDB entries to process
+pdb_entries:
+  - pdb_id: "7CMD"
+    ligand_selection:
+      # Specific ligand to extract, if not provided the first non-common ligand is used
+      ligand_name: "TTT"
+      # chain_id: "A"  # Optional: specify chain
+      # res_id: 1     # Optional: specify residue ID
+    cleaning:
+      # Override global cleaning settings for this PDB
+      strategy: ["HOH", "NA", "CL"]
+    analysis:
+      # Override global analysis settings for this PDB
+      use_enhanced_coordinates: true
+    autodock:
+      # Override global AutoDock settings for this PDB
+      prepare_as: "ligand"  # Options: "ligand", "receptor", "both"
+  
+  - pdb_id: "6WX4"
+    ligand_selection:
+      ligand_name: "LIG"
+    cleaning:
+      strategy: "common"
+    analysis:
+      use_enhanced_coordinates: true
+    autodock:
+      prepare_as: "receptor"
+  
+  - pdb_id: "1ABC"
+    ligand_selection:
+      # Will auto-select the first non-common ligand
+    cleaning:
+      strategy: "none"
+    analysis:
+      use_enhanced_coordinates: false
+      method: "distance"
+    autodock:
+      prepare_as: "both"
+      force_field: "CHARMM"
+
+# Processing options
+processing:
+  # Run in parallel (if supported)
+  parallel: false
+  # Number of parallel processes (if parallel=true)
+  max_processes: 4
+  # Continue on error or stop
+  continue_on_error: true

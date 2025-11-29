@@ -1,0 +1,22 @@
+{
+  "input_dir": "./sample_data",
+  "output_dir": "./results",
+  "split_complexes": true,
+  "extract_apo_proteins": true,
+  "extract_ligands": true,
+  "analyze_binding_affinity": true,
+  "generate_visualizations": true,
+  "create_summary_reports": true,
+  "output_csv": true,
+  "output_excel": true,
+  "output_pdb": true,
+  "output_mol2": true,
+  "fix_chains": false,
+  "run_additional_docking": false,
+  "use_vina_score": true,
+  "use_cnn_score": true,
+  "directory_structure": "AUTO",
+  "receptor_pattern": "*receptor*.pdb",
+  "ligand_pattern": "*ligand*.sdf",
+  "docking_result_pattern": "*out*.pdbqt"
+}

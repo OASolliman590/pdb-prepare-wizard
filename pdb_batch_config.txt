@@ -1,0 +1,13 @@
+# PDB Batch Processing Configuration (TXT Format)
+# This file defines multiple PDB entries for batch processing
+# Format: PDBID|LIGAND|CLEANING_STRATEGY|PREPARE_AS
+# 
+# PDBID: 4-character PDB identifier
+# LIGAND: Specific ligand to extract (or AUTO for auto-selection)
+# CLEANING_STRATEGY: all, common, none, or comma-separated list
+# PREPARE_AS: ligand, receptor, both
+
+7CMD|TTT|common|ligand
+6WX4|LIG|common|receptor
+1ABC|AUTO|none|both
+2XYZ|ABC|HOH,NA,CL|ligand

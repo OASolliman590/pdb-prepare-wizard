@@ -1,0 +1,106 @@
+# Post-Docking Analysis Configuration Schema
+
+# Analysis Parameters
+analysis:
+  # Docking types to analyze (vina, gnina, or both)
+  docking_types: [vina, gnina]
+  
+  # Comparative benchmark - complexes to compare against
+  # Use "*" for all complexes, or specify specific targets like "COX2"
+  comparative_benchmark: "*"
+  
+  # Whether to perform binding affinity analysis
+  binding_affinity_analysis: true
+  
+  # Whether to perform RMSD analysis
+  rmsd_analysis: true
+  
+  # Whether to generate visualizations
+  generate_visualizations: true
+  
+  # Whether to extract poses
+  extract_poses: true
+
+# Input/Output Directories
+paths:
+  # Input directory containing docking results
+  input_dir: ""
+  
+  # Output directory for results
+  output_dir: "./post_docking_results"
+  
+  # Directory containing receptor files (for GNINA)
+  receptors_dir: ""
+  
+  # Directory containing GNINA outputs
+  gnina_out_dir: ""
+
+# Pose Extraction Parameters
+pose_extraction:
+  # Extract all poses or just the best ones
+  extract_all_poses: false
+  
+  # Criteria for selecting best poses (affinity, rmsd, etc.)
+  best_pose_criteria: "affinity"
+  
+  # Output format for extracted poses
+  output_formats: [pdb, mol2]
+
+# Binding Affinity Analysis Parameters
+binding_affinity:
+  # Affinity threshold for considering strong binders (kcal/mol)
+  # Options: "auto" (calculate dynamically), "comparative" (use comparative benchmark average), or numeric value
+  strong_binder_threshold: "auto"
+  
+  # Number of top performers to report
+  top_performers_count: 10
+  
+  # Whether to analyze by protein
+  analyze_by_protein: true
+  
+  # Whether to analyze by ligand
+  analyze_by_ligand: true
+
+# RMSD Analysis Parameters
+rmsd:
+  # RMSD clustering method (kmeans, dbscan)
+  clustering_method: "kmeans"
+  
+  # Number of clusters for K-means
+  kmeans_clusters: 3
+  
+  # DBSCAN epsilon parameter
+  dbscan_epsilon: 2.0
+  
+  # Minimum samples for DBSCAN
+  dbscan_min_samples: 2
+
+# Visualization Parameters
+visualization:
+  # Output formats for visualizations
+  output_formats: [png, pdf]
+  
+  # DPI for image outputs
+  dpi: 300
+  
+  # Whether to generate 3D visualizations with PyMOL
+  generate_3d: true
+  
+  # Whether to generate 2D interaction maps with PandaMap
+  generate_2d_interactions: true
+
+# Advanced Options
+advanced:
+  # Fix missing chains in structures
+  fix_chains: false
+  
+  # Run additional docking calculations
+  run_additional_docking: false
+  
+  # Directory structure type (AUTO, SINGLE_FOLDER, MULTI_FOLDER)
+  directory_structure: "AUTO"
+  
+  # For MULTI_FOLDER structure, specify patterns
+  receptor_pattern: "*receptor*.pdb"
+  ligand_pattern: "*ligand*.sdf"
+  docking_result_pattern: "*out*.pdbqt"
