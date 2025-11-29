@@ -167,12 +167,20 @@ class AutoDockPreparationPipeline:
             ligand_name = unique_hetatms[0]
             ligand_info = hetatm_details[ligand_name][0]
             
+            # Extract PDB ID from filename (e.g., "1ABC.pdb" -> "1ABC")
+            pdb_id = Path(pdb_file).stem.upper()
+            if len(pdb_id) == 4 and pdb_id.isalnum():
+                pdb_id = pdb_id
+            else:
+                pdb_id = None  # Fallback if can't extract
+            
             # Extract ligand
             ligand_pdb = pipeline.save_hetatm_as_pdb(
                 pdb_file, 
                 ligand_name, 
                 ligand_info['chain'], 
-                ligand_info['res_id']
+                ligand_info['res_id'],
+                pdb_id=pdb_id
             )
             
             if ligand_pdb:

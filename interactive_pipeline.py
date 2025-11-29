@@ -182,7 +182,7 @@ def run_single_pdb_analysis(pipeline, pdb_id, excel_workbook=None):
             if selected_hetatm:
                 # Save ligand as separate PDB
                 ligand_pdb = pipeline.save_hetatm_as_pdb(
-                    pdb_file, selected_hetatm, chain_id, res_id
+                    pdb_file, selected_hetatm, chain_id, res_id, pdb_id=pdb_id
                 )
         
         # Step 4: Extract active site coordinates BEFORE cleaning (if ligand selected)
@@ -221,7 +221,7 @@ def run_single_pdb_analysis(pipeline, pdb_id, excel_workbook=None):
                 to_remove_list.remove(selected_hetatm)
         
         if show_removal_summary(pdb_file, to_remove_list):
-            cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list)
+            cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list, pdb_id=pdb_id)
         else:
             print("Cleaning cancelled. Using original structure.")
             cleaned_pdb = pdb_file

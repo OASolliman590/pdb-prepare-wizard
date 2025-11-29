@@ -226,7 +226,7 @@ class BatchPDBPreparationPipeline:
                 if selected_hetatm:
                     # Save ligand as separate PDB
                     ligand_pdb = pipeline.save_hetatm_as_pdb(
-                        pdb_file, selected_hetatm, chain_id, res_id
+                        pdb_file, selected_hetatm, chain_id, res_id, pdb_id=pdb_id
                     )
             
             # Step 4: Clean PDB
@@ -252,7 +252,7 @@ class BatchPDBPreparationPipeline:
                 to_remove_list.remove(selected_hetatm)
                 print(f"✓ Removed {selected_hetatm} from cleaning list (selected as ligand)")
             
-            cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list)
+            cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list, pdb_id=pdb_id)
             
             # Step 5: Extract active site coordinates and analyze
             results = {'pdb_id': pdb_id}

@@ -141,7 +141,7 @@ def run_single_pdb_cli(pipeline: MolecularDockingPipeline, pdb_id: str,
             if selected_hetatm:
                 # Save ligand as separate PDB
                 ligand_pdb = pipeline.save_hetatm_as_pdb(
-                    pdb_file, selected_hetatm, chain_id, res_id
+                    pdb_file, selected_hetatm, chain_id, res_id, pdb_id=pdb_id
                 )
         
         # Step 4: Extract active site coordinates BEFORE cleaning (if ligand selected)
@@ -212,7 +212,7 @@ def run_single_pdb_cli(pipeline: MolecularDockingPipeline, pdb_id: str,
         
         # Note: Don't auto-remove selected ligand - let user decide via config
         # If ligand is in removal list, it will be removed (creating apo receptor)
-        cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list)
+        cleaned_pdb = pipeline.clean_pdb(pdb_file, to_remove_list, pdb_id=pdb_id)
         
         # Step 6: Analyze pocket properties using cleaned structure (if coordinates were extracted)
         if selected_hetatm and coords is not None:

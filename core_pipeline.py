@@ -163,6 +163,7 @@ class MolecularDockingPipeline:
 
     def save_hetatm_as_pdb(self, pdb_file: str, selected_hetatm: str, 
                           chain_id: str, res_id: int, 
+                          pdb_id: Optional[str] = None,
                           output_filename: Optional[str] = None) -> Optional[str]:
         """
         Save a specific HETATM residue as a separate PDB file.
@@ -172,6 +173,7 @@ class MolecularDockingPipeline:
             selected_hetatm (str): HETATM residue name
             chain_id (str): Chain identifier
             res_id (int): Residue ID
+            pdb_id (str, optional): PDB ID to include in filename
             output_filename (str, optional): Output filename
             
         Returns:
@@ -207,7 +209,10 @@ class MolecularDockingPipeline:
                 
                 # Save as PDB
                 if output_filename is None:
-                    output_filename = self.output_dir / f"ligand_{selected_hetatm}_{chain_id}_{res_id}.pdb"
+                    if pdb_id:
+                        output_filename = self.output_dir / f"{pdb_id}_ligand_{selected_hetatm}_{chain_id}_{res_id}.pdb"
+                    else:
+                        output_filename = self.output_dir / f"ligand_{selected_hetatm}_{chain_id}_{res_id}.pdb"
                 
                 io = PDBIO()
                 io.set_structure(new_structure)
@@ -223,6 +228,7 @@ class MolecularDockingPipeline:
             return None
 
     def clean_pdb(self, pdb_file: str, to_remove_list: List[str], 
+                  pdb_id: Optional[str] = None,
                   output_filename: Optional[str] = None) -> str:
         """
         Clean PDB file by removing specified residues.
@@ -230,6 +236,7 @@ class MolecularDockingPipeline:
         Args:
             pdb_file (str): Path to input PDB file
             to_remove_list (List[str]): List of residue names to remove
+            pdb_id (str, optional): PDB ID to include in filename
             output_filename (str, optional): Output filename
             
         Returns:
@@ -248,7 +255,10 @@ class MolecularDockingPipeline:
                     return resname not in to_remove_list
             
             if output_filename is None:
-                output_filename = self.output_dir / "cleaned.pdb"
+                if pdb_id:
+                    output_filename = self.output_dir / f"{pdb_id}_cleaned.pdb"
+                else:
+                    output_filename = self.output_dir / "cleaned.pdb"
             
             io = PDBIO()
             io.set_structure(structure)
