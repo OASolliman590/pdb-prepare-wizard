@@ -1,0 +1,23 @@
+# Additional dependencies for vina_dock conda environment
+# Based on Jupyter_Dock requirements
+
+# 3D Visualization
+py3dmol>=2.0.0
+
+# 2D Interaction Maps
+# Note: ProLIF requires RDKit and Cython first
+# Install with:
+# conda install rdkit cython
+# pip install git+https://github.com/chemosim-lab/ProLIF.git
+
+# Already in vina_dock (verify these are installed):
+# - matplotlib
+# - seaborn
+# - pandas
+# - numpy
+# - scikit-learn (for clustering)
+
+# Optional but recommended:
+# - openbabel (for file format conversion)
+# - biopython (for RMSD calculations)
+
